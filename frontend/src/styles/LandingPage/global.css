@@ -1,0 +1,44 @@
+html{
+    scroll-behavior: smooth;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Poppins,sans-serif;
+    background:#ffffff;
+    overflow-x:hidden;
+}
+
+a{
+    text-decoration:none;
+}
+
+img{
+    max-width:100%;
+    display:block;
+}
+
+section{
+    padding:100px 0;
+}
+
+/* Scroll Progress Bar */
+
+.scroll-progress{
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    height: 4px;
+
+    background: linear-gradient(90deg,#0b5ed7,#36b6ff);
+
+    z-index: 9999;
+
+    transition: width .15s linear;
+}

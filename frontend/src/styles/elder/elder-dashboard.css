@@ -1,0 +1,862 @@
+.elder-platform {
+  min-height: 100vh;
+  padding-bottom: 100px;
+  background:
+    linear-gradient(
+      180deg,
+      #f8fbff 0%,
+      #eef5ff 100%
+    );
+  color: #17243a;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.elder-header {
+  min-height: 86px;
+  padding: 15px 30px;
+  background: #ffffff;
+  border-bottom: 1px solid #e4ebf3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elder-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.elder-brand-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: #eaf3ff;
+  color: #3578ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.elder-brand strong,
+.elder-brand span {
+  display: block;
+}
+
+.elder-brand strong {
+  font-size: 19px;
+}
+
+.elder-brand span {
+  color: #8390a2;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.elder-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.elder-home-button {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #dfe7ef;
+  border-radius: 14px;
+  background: white;
+  color: #53667d;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.elder-language {
+  min-height: 48px;
+  border: 1px solid #dfe7ef;
+  border-radius: 14px;
+  padding: 0 12px;
+  background: white;
+  color: #43546b;
+  font-size: 12px;
+}
+
+.elder-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #eaf3ff;
+  color: #3578ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.elder-main {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+.elder-welcome {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.elder-welcome > div > span {
+  color: #3b78ea;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.elder-welcome h1 {
+  margin: 7px 0;
+  font-size: clamp(30px, 5vw, 42px);
+}
+
+.elder-welcome p {
+  margin: 0;
+  color: #7c899b;
+  font-size: 14px;
+}
+
+.elder-welcome-speak {
+  width: 68px;
+  height: 68px;
+  border: 0;
+  border-radius: 20px;
+  background: #eaf3ff;
+  color: #3578ed;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+/* =========================
+   BIG ACTION BUTTONS
+========================= */
+
+.elder-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.elder-action {
+  min-height: 160px;
+  border: 1px solid #e1e9f2;
+  border-radius: 23px;
+  padding: 22px;
+  background: #ffffff;
+  box-shadow:
+    0 14px 36px
+      rgba(27, 47, 77, 0.07);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease;
+}
+
+.elder-action:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 18px 42px
+      rgba(27, 47, 77, 0.11);
+}
+
+.elder-action-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.elder-action.blue .elder-action-icon {
+  background: #eaf3ff;
+  color: #3578ed;
+}
+
+.elder-action.purple .elder-action-icon {
+  background: #f2edff;
+  color: #7d62d7;
+}
+
+.elder-action.orange .elder-action-icon {
+  background: #fff2e6;
+  color: #df812d;
+}
+
+.elder-action.green .elder-action-icon {
+  background: #e8f9f1;
+  color: #159d6a;
+}
+
+.elder-action-content strong,
+.elder-action-content span {
+  display: block;
+}
+
+.elder-action-content strong {
+  font-size: 19px;
+}
+
+.elder-action-content span {
+  margin-top: 5px;
+  color: #8a97a8;
+  font-size: 11px;
+}
+
+/* =========================
+   SECTION HEADINGS
+========================= */
+
+.elder-reminder-section {
+  margin-top: 26px;
+}
+
+.elder-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+.elder-section-heading span {
+  color: #3b78ea;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.elder-section-heading h2 {
+  margin: 4px 0 0;
+  font-size: 23px;
+}
+
+.elder-section-heading button {
+  border: 0;
+  background: transparent;
+  color: #3678ed;
+  font-weight: 800;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* =========================
+   COMMON ELDER CARD
+========================= */
+
+.elder-card {
+  background: #ffffff;
+  border: 1px solid #e0e8f1;
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow:
+    0 14px 38px
+      rgba(28, 48, 78, .06);
+
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.elder-card-icon {
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+  border-radius: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 27px;
+}
+
+.elder-card-icon.medicine {
+  background: #eaf3ff;
+  color: #3578ed;
+}
+
+.elder-card-icon.appointment {
+  background: #f2edff;
+  color: #7d62d7;
+}
+
+.elder-card-body {
+  flex: 1;
+}
+
+.elder-small-label {
+  display: block;
+  color: #98a4b3;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.elder-card-body h3 {
+  margin: 4px 0;
+  font-size: 21px;
+}
+
+.elder-card-body > p {
+  margin: 0;
+  color: #738197;
+  font-size: 12px;
+}
+
+.elder-card-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* =========================
+   MEDICINE
+========================= */
+
+.medicine-time,
+.appointment-meta {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.medicine-time {
+  align-items: center;
+  gap: 6px;
+}
+
+.appointment-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* =========================
+   VOICE
+========================= */
+
+.elder-voice-button {
+  min-height: 48px;
+  border: 1px solid #dce5ee;
+  border-radius: 13px;
+  padding: 0 14px;
+  background: white;
+  color: #53667d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* =========================
+   NOTIFICATIONS
+========================= */
+
+.elder-notification {
+  background: white;
+  border: 1px solid #e0e8f1;
+  border-radius: 21px;
+  padding: 17px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow:
+    0 12px 32px
+      rgba(27, 47, 77, .05);
+}
+
+.elder-notification.unread {
+  border-color: #cfe0fa;
+  box-shadow:
+    0 12px 34px
+      rgba(53, 120, 237, .08);
+}
+
+.notification-icon {
+  width: 57px;
+  height: 57px;
+  border-radius: 18px;
+  flex-shrink: 0;
+  background: #edf4ff;
+  color: #3578ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+}
+
+.notification-body {
+  flex: 1;
+}
+
+.notification-body h3 {
+  margin: 4px 0;
+  font-size: 16px;
+}
+
+.notification-body p {
+  margin: 0;
+  color: #758397;
+  line-height: 1.6;
+  font-size: 11px;
+}
+
+.mark-read-button,
+.mark-all-read {
+  border: 0;
+  background: #edf4ff;
+  color: #3678ed;
+  padding: 7px 9px;
+  border-radius: 9px;
+  margin-top: 9px;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mark-all-read {
+  margin: 0 0 10px;
+}
+
+/* =========================
+   SOS
+========================= */
+
+.elder-sos-section {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+}
+
+.elder-sos {
+  position: relative;
+  overflow: hidden;
+  width: min(440px, 100%);
+  min-height: 170px;
+  border: 0;
+  border-radius: 28px;
+  background:
+    linear-gradient(
+      135deg,
+      #f15c56,
+      #d93b43
+    );
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow:
+    0 18px 42px
+      rgba(214, 62, 70, .24);
+  touch-action: none;
+  cursor: pointer;
+}
+
+.elder-sos svg {
+  font-size: 29px;
+}
+
+.elder-sos strong {
+  font-size: 30px;
+  letter-spacing: .08em;
+}
+
+.elder-sos span {
+  font-size: 11px;
+}
+
+.elder-sos.activated {
+  background:
+    linear-gradient(
+      135deg,
+      #a82230,
+      #791722
+    );
+}
+
+.sos-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 7px;
+  background: rgba(255,255,255,.18);
+}
+
+.sos-progress div {
+  height: 100%;
+  background: white;
+}
+
+/* =========================
+   BOTTOM NAVIGATION
+========================= */
+
+.elder-bottom-nav {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(720px, calc(100% - 28px));
+  background: white;
+  border: 1px solid #dfe7ef;
+  border-radius: 22px;
+  padding: 7px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  box-shadow:
+    0 18px 45px
+      rgba(23, 42, 69, .14);
+}
+
+.elder-bottom-button {
+  min-height: 59px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: #8a97a7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  cursor: pointer;
+}
+
+.elder-bottom-button.active {
+  background: #edf4ff;
+  color: #3578ed;
+}
+
+.elder-bottom-button .bottom-icon {
+  font-size: 19px;
+  position: relative;
+}
+
+.bottom-icon small {
+  position: absolute;
+  right: -10px;
+  top: -8px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #ef5350;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+.elder-bottom-button > span:last-child {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+/* =========================
+   SUB PAGES
+========================= */
+
+.elder-subpage h1 {
+  margin: 20px 0;
+  font-size: 31px;
+}
+
+.elder-back {
+  border: 1px solid #dfe7ef;
+  background: white;
+  color: #51647a;
+  border-radius: 13px;
+  padding: 11px 16px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.elder-subpage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* =========================
+   AI
+========================= */
+
+.elder-feature-card {
+  background: white;
+  border: 1px solid #e0e8f1;
+  border-radius: 24px;
+  padding: 38px;
+  text-align: center;
+}
+
+.feature-icon {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 16px;
+  border-radius: 25px;
+  background: #e8f9f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 39px;
+}
+
+.elder-feature-card h2 {
+  margin: 0;
+  font-size: 25px;
+}
+
+.elder-feature-card p {
+  max-width: 650px;
+  margin: 12px auto 20px;
+  color: #78879a;
+  line-height: 1.7;
+  font-size: 12px;
+}
+
+.feature-pills {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.feature-pills span {
+  padding: 9px 12px;
+  background: #edf4ff;
+  color: #3578ed;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* =========================
+   PROFILE
+========================= */
+
+.elder-profile {
+  background: white;
+  border: 1px solid #e0e8f1;
+  border-radius: 24px;
+  padding: 38px;
+  text-align: center;
+}
+
+.profile-avatar {
+  width: 94px;
+  height: 94px;
+  margin: 0 auto 15px;
+  border-radius: 27px;
+  background: #eaf3ff;
+  color: #3578ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 35px;
+  font-weight: 800;
+}
+
+.elder-profile h2 {
+  margin: 0;
+  font-size: 27px;
+}
+
+.elder-profile p {
+  color: #7c899b;
+}
+
+.elder-profile span {
+  color: #3578ed;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* =========================
+   EMPTY / LOADING / ERROR
+========================= */
+
+.elder-empty {
+  min-height: 210px;
+  border: 1px dashed #cdd9e5;
+  border-radius: 22px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #8996a7;
+  padding: 20px;
+}
+
+.elder-empty div {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.elder-loading,
+.elder-error-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  background:
+    linear-gradient(
+      180deg,
+      #f8fbff,
+      #eef5ff
+    );
+}
+
+.elder-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #dce8f8;
+  border-top-color: #3578ed;
+  border-radius: 50%;
+  animation: elder-spin .8s linear infinite;
+}
+
+@keyframes elder-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.elder-error-card {
+  width: min(450px, calc(100% - 40px));
+  padding: 35px;
+  border-radius: 24px;
+  background: white;
+  border: 1px solid #efd8d4;
+  text-align: center;
+}
+
+.elder-error-card svg {
+  color: #d9534f;
+  font-size: 28px;
+}
+
+.elder-error-card h2 {
+  margin: 12px 0 7px;
+}
+
+.elder-error-card p {
+  color: #788697;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.elder-error-card button {
+  min-height: 45px;
+  border: 0;
+  border-radius: 13px;
+  padding: 0 18px;
+  background: #3578ed;
+  color: white;
+  font-weight: 800;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 900px) {
+  .elder-action-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .elder-header {
+    padding: 13px 16px;
+  }
+
+  .elder-brand span {
+    display: none;
+  }
+
+  .elder-main {
+    width: min(100% - 24px, 620px);
+    padding-top: 20px;
+  }
+
+  .elder-welcome {
+    align-items: flex-start;
+  }
+
+  .elder-welcome h1 {
+    font-size: 29px;
+  }
+
+  .elder-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .elder-action {
+    min-height: 125px;
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .elder-action-content strong {
+    font-size: 19px;
+  }
+
+  .elder-card,
+  .elder-notification {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .elder-card-actions {
+    width: 100%;
+  }
+
+  .elder-card-actions .elder-voice-button {
+    width: 100%;
+  }
+
+  .elder-section-heading {
+    align-items: flex-start;
+  }
+}

@@ -402,3 +402,38 @@ class ConnectionRequest(models.Model):
             f"{self.elder.user.email} "
             f"({self.status})"
         )
+# ============================================================
+# PASSWORD RESET OTP
+# ============================================================
+
+class PasswordResetOTP(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="password_reset_otps",
+    )
+
+    otp = models.CharField(
+        max_length=6
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    expires_at = models.DateTimeField()
+
+    is_verified = models.BooleanField(
+        default=False
+    )
+
+    attempts = models.PositiveIntegerField(
+        default=0
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Password reset OTP for {self.user.email}"

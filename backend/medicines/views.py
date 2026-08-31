@@ -6,7 +6,9 @@ from accounts.models import FamilyElderRelationship
 
 from .models import Medicine
 from .serializers import MedicineSerializer
-
+from notifications.services import (
+    create_medicine_notification,
+)
 
 class MedicineAccessMixin:
     def check_elder_access(self, elder_id, write=False):
@@ -114,6 +116,15 @@ class MedicineListCreateView(
 
         serializer.save(
             elder=elder
+        )
+
+        medicine = serializer.save(
+            elder=elder
+        )
+
+        create_medicine_notification(
+            elder=elder,
+            medicine=medicine,
         )
 
 

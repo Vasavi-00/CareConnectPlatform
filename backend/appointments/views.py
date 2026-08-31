@@ -3,6 +3,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import FamilyElderRelationship
+from notifications.services import (
+    create_appointment_notification,
+)
 
 from .models import Appointment
 from .serializers import AppointmentSerializer
@@ -134,15 +137,19 @@ class AppointmentListCreateView(
             )
         )
 
-        # Appointments are managed by family members.
         if self.request.user.role != "FAMILY":
             raise PermissionDenied(
                 "Only family members can create appointments."
             )
 
-        serializer.save(
+        appointment = serializer.save(
             elder=elder,
             created_by=family_profile
+        )
+
+        create_appointment_notification(
+            elder=elder,
+            appointment=appointment,
         )
 
 

@@ -23,9 +23,9 @@ import "./styles/LandingPage/responsive.css";
    EXISTING AUTH / ELDER STYLES
 ========================================================= */
 
-import "./styles/auth.css";
-import "./styles/elder-dashboard.css";
-
+import "./styles/AuthPage/auth.css";
+import "./styles/elder/elder-dashboard.css";
+import "./styles/ForgotPassword/forgotpassword.css";
 /* =========================================================
    AOS
 ========================================================= */

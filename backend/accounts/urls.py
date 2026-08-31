@@ -15,6 +15,10 @@ from .views import (
 
     FamilyConnectedEldersView,
     ElderConnectedFamilyView,
+
+    ForgotPasswordView,
+    VerifyPasswordResetOTPView,
+    ResetPasswordView,
 )
 
 
@@ -100,5 +104,23 @@ urlpatterns = [
         "connections/elder/family/",
         ElderConnectedFamilyView.as_view(),
         name="elder-connected-family"
+    ),
+
+    path(
+        "auth/forgot-password/",
+        ForgotPasswordView.as_view(),
+        name="forgot-password",
+    ),
+
+    path(
+        "auth/forgot-password/verify-otp/",
+        VerifyPasswordResetOTPView.as_view(),
+        name="verify-password-reset-otp",
+    ),
+
+    path(
+        "auth/forgot-password/reset/",
+        ResetPasswordView.as_view(),
+        name="reset-password",
     ),
 ]

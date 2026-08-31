@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 
@@ -16,13 +17,21 @@ from .models import (
 # ============================================================
 
 class SignupSerializer(serializers.ModelSerializer):
+
     password = serializers.CharField(
         write_only=True,
-        min_length=8
+        min_length=8,
+        trim_whitespace=False,
+    )
+
+    confirm_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
     )
 
     class Meta:
         model = User
+
         fields = [
             "id",
             "first_name",
@@ -30,8 +39,17 @@ class SignupSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "password",
+            "confirm_password",
             "role",
         ]
+
+        read_only_fields = [
+            "id",
+        ]
+
+    # --------------------------------------------------------
+    # EMAIL VALIDATION
+    # --------------------------------------------------------
 
     def validate_email(self, value):
         value = value.lower().strip()
@@ -43,7 +61,12 @@ class SignupSerializer(serializers.ModelSerializer):
 
         return value
 
+    # --------------------------------------------------------
+    # ROLE VALIDATION
+    # --------------------------------------------------------
+
     def validate_role(self, value):
+
         if value not in [
             User.Role.ELDER,
             User.Role.FAMILY,
@@ -54,20 +77,85 @@ class SignupSerializer(serializers.ModelSerializer):
 
         return value
 
+    # --------------------------------------------------------
+    # PASSWORD + CONFIRM PASSWORD VALIDATION
+    # --------------------------------------------------------
+
+    def validate(self, attrs):
+
+        password = attrs.get("password")
+        confirm_password = attrs.get("confirm_password")
+
+        # Check password confirmation
+        if password != confirm_password:
+            raise serializers.ValidationError({
+                "confirm_password": "Passwords do not match."
+            })
+
+        # Prepare temporary user object so Django's password
+        # validators can check things such as:
+        # - similarity to username/email
+        # - common passwords
+        # - minimum length
+        # - numeric-only passwords
+        temp_user = User(
+            email=attrs.get("email", ""),
+            first_name=attrs.get("first_name", ""),
+            last_name=attrs.get("last_name", ""),
+        )
+
+        try:
+            validate_password(password, user=temp_user)
+        except serializers.ValidationError:
+            raise
+
+        except Exception as exc:
+            raise serializers.ValidationError({
+                "password": list(exc.messages)
+            })
+
+        return attrs
+
+    # --------------------------------------------------------
+    # CREATE USER
+    # --------------------------------------------------------
+
     @transaction.atomic
     def create(self, validated_data):
+
+        # confirm_password is only for validation.
+        # NEVER store it in the database.
+        validated_data.pop("confirm_password")
+
         password = validated_data.pop("password")
 
-        user = User.objects.create_user(
-            password=password,
+        # Create the user directly rather than using
+        # create_user(), avoiding the username issue you
+        # encountered earlier.
+        user = User(
             **validated_data
         )
 
+        # Django hashes the password securely.
+        user.set_password(password)
+
+        user.save()
+
+        # ----------------------------------------------------
+        # CREATE ROLE-SPECIFIC PROFILE
+        # ----------------------------------------------------
+
         if user.role == User.Role.ELDER:
-            ElderProfile.objects.create(user=user)
+
+            ElderProfile.objects.create(
+                user=user
+            )
 
         elif user.role == User.Role.FAMILY:
-            FamilyProfile.objects.create(user=user)
+
+            FamilyProfile.objects.create(
+                user=user
+            )
 
         return user
 
@@ -80,6 +168,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
+
         fields = [
             "id",
             "first_name",
@@ -97,17 +186,20 @@ class UserSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
+
     password = serializers.CharField(
-        write_only=True
+        write_only=True,
+        trim_whitespace=False,
     )
 
     def validate(self, attrs):
+
         email = attrs["email"].lower().strip()
         password = attrs["password"]
 
         user = authenticate(
             username=email,
-            password=password
+            password=password,
         )
 
         if user is None:
@@ -133,25 +225,26 @@ class ElderProfileSerializer(serializers.ModelSerializer):
 
     email = serializers.EmailField(
         source="user.email",
-        read_only=True
+        read_only=True,
     )
 
     first_name = serializers.CharField(
         source="user.first_name",
-        read_only=True
+        read_only=True,
     )
 
     last_name = serializers.CharField(
         source="user.last_name",
-        read_only=True
+        read_only=True,
     )
 
     careconnect_id = serializers.CharField(
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
         model = ElderProfile
+
         fields = [
             "id",
             "careconnect_id",
@@ -174,6 +267,7 @@ class ElderProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
         read_only_fields = [
             "careconnect_id",
             "created_at",
@@ -189,21 +283,22 @@ class FamilyProfileSerializer(serializers.ModelSerializer):
 
     email = serializers.EmailField(
         source="user.email",
-        read_only=True
+        read_only=True,
     )
 
     first_name = serializers.CharField(
         source="user.first_name",
-        read_only=True
+        read_only=True,
     )
 
     last_name = serializers.CharField(
         source="user.last_name",
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
         model = FamilyProfile
+
         fields = [
             "id",
             "email",
@@ -221,6 +316,7 @@ class FamilyProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
         read_only_fields = [
             "created_at",
             "updated_at",
@@ -236,17 +332,21 @@ class FamilyElderRelationshipSerializer(
 ):
 
     family_name = serializers.SerializerMethodField()
+
     family_email = serializers.SerializerMethodField()
 
     elder_name = serializers.SerializerMethodField()
+
     elder_email = serializers.SerializerMethodField()
+
     careconnect_id = serializers.CharField(
         source="elder.careconnect_id",
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
         model = FamilyElderRelationship
+
         fields = [
             "id",
 
@@ -281,21 +381,25 @@ class FamilyElderRelationshipSerializer(
         ]
 
     def get_family_name(self, obj):
+
         return (
             f"{obj.family.user.first_name} "
             f"{obj.family.user.last_name}"
         ).strip()
 
     def get_family_email(self, obj):
+
         return obj.family.user.email
 
     def get_elder_name(self, obj):
+
         return (
             f"{obj.elder.user.first_name} "
             f"{obj.elder.user.last_name}"
         ).strip()
 
     def get_elder_email(self, obj):
+
         return obj.elder.user.email
 
 
@@ -325,10 +429,13 @@ class ConnectionRequestCreateSerializer(
         value = value.strip().upper()
 
         try:
+
             elder = ElderProfile.objects.get(
                 careconnect_id=value
             )
+
         except ElderProfile.DoesNotExist:
+
             raise serializers.ValidationError(
                 "No elder found with this CareConnect ID."
             )
@@ -339,40 +446,75 @@ class ConnectionRequestCreateSerializer(
 
     def validate(self, attrs):
 
-        family = self.context["request"].user.family_profile
+        request = self.context["request"]
+
+        family = request.user.family_profile
+
         elder = self.context["elder"]
+
+        # ----------------------------------------------------
+        # CHECK EXISTING ACTIVE CONNECTION
+        # ----------------------------------------------------
 
         if FamilyElderRelationship.objects.filter(
             family=family,
             elder=elder,
-            is_active=True
+            is_active=True,
         ).exists():
+
             raise serializers.ValidationError(
                 "You are already connected to this elder."
             )
 
+        # ----------------------------------------------------
+        # CHECK PENDING REQUEST
+        # ----------------------------------------------------
+
         if ConnectionRequest.objects.filter(
             family=family,
             elder=elder,
-            status=ConnectionRequest.Status.PENDING
+            status=ConnectionRequest.Status.PENDING,
         ).exists():
+
             raise serializers.ValidationError(
                 "A connection request is already pending."
             )
 
         return attrs
+    def validate_phone(self, value):
+        value = value.strip()
+
+        if not value:
+            return value
+
+        if not value.isdigit():
+            raise serializers.ValidationError(
+                "Phone number must contain only digits."
+            )
+
+        if len(value) != 10:
+            raise serializers.ValidationError(
+                "Phone number must contain exactly 10 digits."
+            )
+
+        return value
 
     def create(self, validated_data):
 
         elder = self.context["elder"]
-        family = self.context["request"].user.family_profile
+
+        family = (
+            self.context["request"]
+            .user
+            .family_profile
+        )
 
         validated_data.pop("careconnect_id")
 
         return ConnectionRequest.objects.create(
             family=family,
             elder=elder,
-            **validated_data
+            **validated_data,
         )
 
 
@@ -385,13 +527,16 @@ class ConnectionRequestSerializer(
 ):
 
     family_name = serializers.SerializerMethodField()
+
     family_email = serializers.SerializerMethodField()
 
     elder_name = serializers.SerializerMethodField()
+
     elder_email = serializers.SerializerMethodField()
+
     careconnect_id = serializers.CharField(
         source="elder.careconnect_id",
-        read_only=True
+        read_only=True,
     )
 
     class Meta:
@@ -425,26 +570,30 @@ class ConnectionRequestSerializer(
         ]
 
     def get_family_name(self, obj):
+
         return (
             f"{obj.family.user.first_name} "
             f"{obj.family.user.last_name}"
         ).strip()
 
     def get_family_email(self, obj):
+
         return obj.family.user.email
 
     def get_elder_name(self, obj):
+
         return (
             f"{obj.elder.user.first_name} "
             f"{obj.elder.user.last_name}"
         ).strip()
 
     def get_elder_email(self, obj):
+
         return obj.elder.user.email
 
 
 # ============================================================
-# CONNECTION REQUEST RESPONSE
+# CONNECTION REQUEST ACTION
 # ============================================================
 
 class ConnectionRequestActionSerializer(
@@ -457,3 +606,134 @@ class ConnectionRequestActionSerializer(
             "REJECT",
         ]
     )
+
+# ============================================================
+# FORGOT PASSWORD
+# ============================================================
+
+class ForgotPasswordSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+
+        return value.lower().strip()
+
+
+# ============================================================
+# VERIFY PASSWORD RESET OTP
+# ============================================================
+
+class VerifyPasswordResetOTPSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+
+    otp = serializers.CharField(
+        min_length=6,
+        max_length=6,
+    )
+
+    def validate_email(self, value):
+
+        return value.lower().strip()
+
+    def validate_otp(self, value):
+
+        if not value.isdigit():
+            raise serializers.ValidationError(
+                "OTP must contain only numbers."
+            )
+
+        return value
+
+
+# ============================================================
+# RESET PASSWORD
+# ============================================================
+
+class ResetPasswordSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+
+    otp = serializers.CharField(
+        min_length=6,
+        max_length=6,
+    )
+
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        trim_whitespace=False,
+    )
+
+    confirm_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+    )
+
+    def validate_email(self, value):
+
+        return value.lower().strip()
+
+    def validate_otp(self, value):
+
+        if not value.isdigit():
+            raise serializers.ValidationError(
+                "OTP must contain only numbers."
+            )
+
+        return value
+
+    def validate(self, attrs):
+
+        password = attrs.get("password")
+        confirm_password = attrs.get("confirm_password")
+
+        # ----------------------------------------------------
+        # PASSWORD MATCH
+        # ----------------------------------------------------
+
+        if password != confirm_password:
+
+            raise serializers.ValidationError({
+                "confirm_password":
+                    "Passwords do not match."
+            })
+
+        # ----------------------------------------------------
+        # FIND USER
+        # ----------------------------------------------------
+
+        email = attrs.get("email")
+
+        try:
+
+            user = User.objects.get(
+                email=email
+            )
+
+        except User.DoesNotExist:
+
+            raise serializers.ValidationError({
+                "email":
+                    "Unable to process this request."
+            })
+
+        # ----------------------------------------------------
+        # DJANGO PASSWORD VALIDATION
+        # ----------------------------------------------------
+
+        try:
+
+            validate_password(
+                password,
+                user=user,
+            )
+
+        except serializers.ValidationError:
+
+            raise
+
+        attrs["user"] = user
+
+        return attrs

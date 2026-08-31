@@ -12,7 +12,10 @@ urlpatterns = [
     include("appointments.urls")),
     path(
     "api/emergency-contacts/",
-    include("emergency_contacts.urls"),
+    include("emergency_contacts.urls")),
+    path(
+    "api/notifications/",
+    include("notifications.urls")
 ),
 
 ]

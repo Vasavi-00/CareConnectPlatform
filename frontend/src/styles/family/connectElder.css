@@ -1,0 +1,322 @@
+.connect-elder-card {
+    width: 100%;
+    max-width: 720px;
+    padding: 28px;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.connect-elder-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.connect-elder-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #ecfdf5;
+    color: #16a34a;
+
+    font-size: 20px;
+}
+
+.connect-elder-kicker {
+    margin: 0 0 4px;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+
+    color: #16a34a;
+}
+
+.connect-elder-header h2 {
+    margin: 0;
+
+    font-size: 24px;
+    line-height: 1.25;
+
+    color: #111827;
+}
+
+.connect-elder-header p:last-child {
+    margin: 7px 0 0;
+
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.connect-elder-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.connect-elder-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    color: #374151;
+}
+
+.required {
+    margin-left: 4px;
+    color: #dc2626;
+}
+
+.optional {
+    margin-left: 6px;
+
+    font-size: 12px;
+    font-weight: 400;
+
+    color: #9ca3af;
+}
+
+.connect-input-wrap {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+}
+
+.connect-input-wrap > svg {
+    position: absolute;
+    left: 14px;
+
+    color: #9ca3af;
+
+    pointer-events: none;
+}
+
+.connect-input-wrap input,
+.connect-input-wrap select {
+    width: 100%;
+    min-height: 48px;
+
+    padding: 0 14px 0 42px;
+
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+
+    outline: none;
+
+    background: #ffffff;
+
+    color: #111827;
+
+    font-size: 14px;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.connect-input-wrap input:focus,
+.connect-input-wrap select:focus {
+    border-color: #22c55e;
+
+    box-shadow:
+        0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.connect-input-wrap input::placeholder {
+    color: #9ca3af;
+}
+
+.connect-elder-form label > small {
+    font-size: 12px;
+    font-weight: 400;
+    color: #9ca3af;
+}
+
+/* =========================================================
+   SUBMIT BUTTON
+========================================================= */
+
+.connect-elder-submit {
+    min-height: 50px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    border: none;
+    border-radius: 12px;
+
+    background: #16a34a;
+    color: white;
+
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.connect-elder-submit:hover:not(:disabled) {
+    background: #15803d;
+    transform: translateY(-1px);
+}
+
+.connect-elder-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+.connection-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    margin-bottom: 18px;
+    padding: 13px 14px;
+
+    border-radius: 12px;
+
+    font-size: 13px;
+}
+
+.connection-message span {
+    flex: 1;
+}
+
+.connection-message button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 4px;
+
+    border: none;
+    background: transparent;
+
+    cursor: pointer;
+}
+
+.connection-success {
+    background: #ecfdf5;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.connection-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* =========================================================
+   INFORMATION BOX
+========================================================= */
+
+.connect-elder-info {
+    display: flex;
+    gap: 12px;
+
+    margin-top: 22px;
+    padding: 16px;
+
+    border-radius: 12px;
+
+    background: #f9fafb;
+}
+
+.connect-elder-info > svg {
+    margin-top: 3px;
+
+    flex-shrink: 0;
+
+    color: #16a34a;
+}
+
+.connect-elder-info strong {
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 13px;
+    color: #374151;
+}
+
+.connect-elder-info p {
+    margin: 0;
+
+    font-size: 12px;
+    line-height: 1.5;
+
+    color: #6b7280;
+}
+
+/* =========================================================
+   SPINNER
+========================================================= */
+
+.spin {
+    animation: connect-spin 1s linear infinite;
+}
+
+@keyframes connect-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+    .connect-elder-card {
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    .connect-elder-header {
+        gap: 12px;
+    }
+
+    .connect-elder-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .connect-elder-header h2 {
+        font-size: 20px;
+    }
+}

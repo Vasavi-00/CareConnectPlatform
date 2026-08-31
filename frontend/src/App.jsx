@@ -5,28 +5,25 @@ import {
   Routes,
 } from "react-router-dom";
 
-// Public pages
 import LandingPage from "./pages/LandingPage/LandingPage";
 import AuthPage from "./pages/AuthPage/AuthPage";
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 
-// New Family Dashboard
 import FamilyDashboard from "./pages/family/FamilyDashboard";
-
-// Existing Elder pages
 import ElderDashboard from "./pages/elder/ElderDashboard";
-import ElderSectionPage from "./pages/elder/ElderSectionPage";
 
 /* =========================================================
-   LOCAL STORAGE USER
+   STORED USER
 ========================================================= */
 
 function getStoredUser() {
   try {
-    const user = localStorage.getItem(
-      "careconnect_user"
-    );
+    const storedUser =
+      localStorage.getItem("careconnect_user");
 
-    return user ? JSON.parse(user) : null;
+    return storedUser
+      ? JSON.parse(storedUser)
+      : null;
   } catch (error) {
     console.error(
       "Unable to read stored user:",
@@ -41,7 +38,9 @@ function getStoredUser() {
    FAMILY PROTECTED ROUTE
 ========================================================= */
 
-function ProtectedFamilyRoute({ children }) {
+function ProtectedFamilyRoute({
+  children,
+}) {
   const user = getStoredUser();
 
   if (!user) {
@@ -78,7 +77,9 @@ function ProtectedFamilyRoute({ children }) {
    ELDER PROTECTED ROUTE
 ========================================================= */
 
-function ProtectedElderRoute({ children }) {
+function ProtectedElderRoute({
+  children,
+}) {
   const user = getStoredUser();
 
   if (!user) {
@@ -91,9 +92,18 @@ function ProtectedElderRoute({ children }) {
   }
 
   if (user.role !== "ELDER") {
+    if (user.role === "FAMILY") {
+      return (
+        <Navigate
+          to="/dashboard/family"
+          replace
+        />
+      );
+    }
+
     return (
       <Navigate
-        to="/dashboard/family"
+        to="/"
         replace
       />
     );
@@ -109,9 +119,7 @@ function ProtectedElderRoute({ children }) {
 function App() {
   return (
     <Routes>
-      {/* ===================================================
-          PUBLIC
-      =================================================== */}
+      {/* PUBLIC */}
 
       <Route
         path="/"
@@ -132,9 +140,11 @@ function App() {
         }
       />
 
-      {/* ===================================================
-          FAMILY DASHBOARD
-      =================================================== */}
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
+      {/* FAMILY */}
 
       <Route
         path="/dashboard/family"
@@ -145,21 +155,7 @@ function App() {
         }
       />
 
-      {/* ===================================================
-          ELDER DASHBOARD
-      =================================================== */}
-
-      <Route
-        path="/dashboard/elder"
-        element={
-          <ProtectedElderRoute>
-            <Navigate
-              to="/elder/dashboard"
-              replace
-            />
-          </ProtectedElderRoute>
-        }
-      />
+      {/* ELDER */}
 
       <Route
         path="/elder/dashboard"
@@ -172,53 +168,7 @@ function App() {
         }
       />
 
-      <Route
-        path="/elder/medicines"
-        element={
-          <ProtectedElderRoute>
-            <ElderSectionPage
-              section="medicines"
-            />
-          </ProtectedElderRoute>
-        }
-      />
-
-      <Route
-        path="/elder/appointments"
-        element={
-          <ProtectedElderRoute>
-            <ElderSectionPage
-              section="appointments"
-            />
-          </ProtectedElderRoute>
-        }
-      />
-
-      <Route
-        path="/elder/ai-companion"
-        element={
-          <ProtectedElderRoute>
-            <ElderSectionPage
-              section="ai-companion"
-            />
-          </ProtectedElderRoute>
-        }
-      />
-
-      <Route
-        path="/elder/profile"
-        element={
-          <ProtectedElderRoute>
-            <ElderSectionPage
-              section="profile"
-            />
-          </ProtectedElderRoute>
-        }
-      />
-
-      {/* ===================================================
-          FALLBACK
-      =================================================== */}
+      {/* FALLBACK */}
 
       <Route
         path="*"

@@ -25,7 +25,7 @@ import "./styles/LandingPage/responsive.css";
 
 import "./styles/AuthPage/auth.css";
 import "./styles/elder/elder-dashboard.css";
-import "./styles/ForgotPassword/forgotpassword.css";
+import "./styles/ForgotPassword/forgotPassword.css";
 /* =========================================================
    AOS
 ========================================================= */

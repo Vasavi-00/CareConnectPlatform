@@ -1,3 +1,5 @@
+import logo from "../../assets/images/logo1.png";
+
 import {
   FaFacebookF,
   FaInstagram,
@@ -23,15 +25,11 @@ function Footer() {
 
         <div>
 
-          <div className="footer-logo">
-                 CareConnect
-          </div>
+          <img src={logo} alt="CareConnect" className="footer-logo" />
 
           <p>
-            CareConnect helps families stay
-            connected with elderly loved ones
-            through reminders, emergency support,
-            family care management and AI companionship.
+            CareConnect helps families stay connected with elderly loved ones
+            through AI-powered healthcare monitoring.
           </p>
 
           <div className="social">

@@ -1,118 +1,50 @@
-import userImage from "../../assets/images/user.png";
-
-import { FaStar } from "react-icons/fa";
-
-const testimonials = [
-
+const faqs = [
   {
-    name: "Priya Sharma",
-    role: "Daughter",
-    message:
-      "CareConnect helps our family stay connected with our parents and keep track of important care activities.",
+    question: "What is CareConnect?",
+    answer:
+      "CareConnect is a smart elder care platform that helps families monitor and care for senior citizens remotely.",
   },
-
   {
-    name: "Rahul Verma",
-    role: "Son",
-    message:
-      "The medicine reminders and emergency support make elderly care much easier for our family.",
+    question: "Is my family's data secure?",
+    answer:
+      "Yes. We use secure authentication and encrypted communication to protect health data.",
   },
-
   {
-    name: "Anjali Rao",
-    role: "Granddaughter",
-    message:
-      "The simple interface makes it easier for elderly family members to use the platform.",
+    question: "Can multiple family members connect?",
+    answer:
+      "Yes. Multiple family members can monitor and receive notifications.",
   },
-
+  {
+    question: "Does CareConnect support emergency alerts?",
+    answer:
+      "Yes. SOS alerts instantly notify connected family members.",
+  },
 ];
 
-function Testimonials() {
-
+function FAQ() {
   return (
-    <section
-      className="testimonials"
-      id="testimonials"
-    >
-
+    <section className="faq" id="faq">
       <div className="container">
 
         <div className="section-title">
-
-          <span className="badge">
-            Testimonials
-          </span>
-
-          <h2>
-            Designed For Families
-          </h2>
-
-          <p>
-            CareConnect is designed to make
-            elderly care more connected and manageable.
-          </p>
-
+          <span className="badge">FAQ</span>
+          <h2>Frequently Asked Questions</h2>
         </div>
 
-        <div
-          className="testimonial-grid"
-          data-aos="fade-up"
-        >
+        <div className="faq-container" data-aos="fade-up">
 
-          {testimonials.map(
-            (item, index) => (
-
-              <div
-                className="testimonial-card"
-                key={index}
-              >
-
-                <div className="stars">
-
-                  <FaStar />
-                  <FaStar />
-                  <FaStar />
-                  <FaStar />
-                  <FaStar />
-
-                </div>
-
-                <p>
-                  {item.message}
-                </p>
-
-                <div className="user">
-
-                  <img
-                    src={userImage}
-                    alt={item.name}
-                  />
-
-                  <div>
-
-                    <h4>
-                      {item.name}
-                    </h4>
-
-                    <span>
-                      {item.role}
-                    </span>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            )
-          )}
+          {faqs.map((faq, index) => (
+            <details key={index}>
+              <summary>{faq.question}</summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))}
 
         </div>
 
       </div>
-
     </section>
   );
 }
 
-export default Testimonials;
+export default FAQ;

@@ -1,117 +1,117 @@
 import React from "react";
+import { NavLink } from "react-router-dom";
+
 import {
-  FaHome,
+  FaHouse,
+  FaCalendarCheck,
   FaPills,
-  FaCalendarAlt,
-  FaPhoneAlt,
-  FaUserCircle,
-  FaSignOutAlt,
-  FaHeartbeat,
-} from "react-icons/fa";
+  FaRobot,
+  FaUser,
+  FaGear,
+  FaBell,
+  FaCircleQuestion,
+} from "react-icons/fa6";
 
-export default function FamilySidebar({
-  activeSection,
-  onChange,
-  user,
-}) {
-  const menu = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: <FaHome />,
-    },
-    {
-      id: "medicines",
-      label: "Medicines",
-      icon: <FaPills />,
-    },
-    {
-      id: "appointments",
-      label: "Appointments",
-      icon: <FaCalendarAlt />,
-    },
-    {
-      id: "emergency",
-      label: "Emergency Contacts",
-      icon: <FaPhoneAlt />,
-    },
-    {
-      id: "profile",
-      label: "My Profile",
-      icon: <FaUserCircle />,
-    },
-  ];
+import sidebarCare from "../../assets/images/sidebar-care.png";
 
-  const logout = () => {
-    localStorage.removeItem("careconnect_access");
-    localStorage.removeItem("careconnect_refresh");
-    localStorage.removeItem("careconnect_user");
+import "../../styles/family/FamilySidebar.css";
 
-    window.location.href = "/login";
-  };
-
+export default function FamilySidebar({ sidebarOpen }) {
   return (
-    <aside className="family-sidebar">
-      <div className="family-logo">
-        <div className="family-logo-icon">
-          <FaHeartbeat />
-        </div>
+    <aside
+      className={`family-sidebar ${
+        sidebarOpen ? "open" : "closed"
+      }`}
+    >
 
-        <div>
-          <h2>CareConnect</h2>
-          <span>Family Care</span>
-        </div>
-      </div>
+      {/* ==========================================
+          NAVIGATION
+          ========================================== */}
 
-      <div className="sidebar-menu">
-        <p className="sidebar-label">CARE MANAGEMENT</p>
+      <nav className="sidebar-navigation">
 
-        {menu.map((item) => (
-          <button
-            key={item.id}
-            className={`sidebar-item ${
-              activeSection === item.id ? "active" : ""
-            }`}
-            onClick={() => onChange(item.id)}
-          >
-            <span className="sidebar-item-icon">
-              {item.icon}
-            </span>
-
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="sidebar-bottom">
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar">
-            {(
-              user?.first_name?.[0] ||
-              user?.email?.[0] ||
-              "R"
-            ).toUpperCase()}
-          </div>
-
-          <div>
-            <strong>
-              {user?.first_name ||
-                user?.email?.split("@")[0] ||
-                "Family Member"}
-            </strong>
-
-            <span>Family Member</span>
-          </div>
-        </div>
-
-        <button
-          className="sidebar-logout"
-          onClick={logout}
+        <NavLink
+          to="/dashboard/family"
+          end
+          className="sidebar-nav-link"
         >
-          <FaSignOutAlt />
-          Logout
-        </button>
+          <FaHouse />
+          <span>Overview</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/appointments"
+          className="sidebar-nav-link"
+        >
+          <FaCalendarCheck />
+          <span>Appointments</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/medicine"
+          className="sidebar-nav-link"
+        >
+          <FaPills />
+          <span>Medicine</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/ai-companion"
+          className="sidebar-nav-link"
+        >
+          <FaRobot />
+          <span>AI Companion</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/notifications"
+          className="sidebar-nav-link"
+        >
+          <FaBell />
+          <span>Notifications</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/profile"
+          className="sidebar-nav-link"
+        >
+          <FaUser />
+          <span>Parent Profile</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/settings"
+          className="sidebar-nav-link"
+        >
+          <FaGear />
+          <span>Settings</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/family/help"
+          className="sidebar-nav-link"
+        >
+          <FaCircleQuestion />
+          <span>Help & Support</span>
+        </NavLink>
+
+      </nav>
+
+
+      {/* ==========================================
+          SIDEBAR ILLUSTRATION
+          ========================================== */}
+
+      <div>
+        <center>
+        <img
+          src={sidebarCare}
+          alt="Elder and caregiver"
+          className="sidebar-care-image"
+        />
+        </center>
       </div>
+
     </aside>
   );
 }

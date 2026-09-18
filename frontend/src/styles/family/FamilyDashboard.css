@@ -1,0 +1,188 @@
+/* =========================================================
+   FAMILY DASHBOARD
+========================================================= */
+
+.dashboard {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #f5f8fc;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.dashboard > header {
+  flex: 0 0 auto;
+  z-index: 1000;
+}
+
+/* =========================================================
+   BODY
+========================================================= */
+
+.dashboard-body {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  overflow: hidden;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.dashboard-body > aside {
+  flex: 0 0 auto;
+
+  height: 100%;
+  overflow: hidden;
+
+  z-index: 900;
+}
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+
+  height: 100%;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background: #f5f8fc;
+
+  scroll-behavior: smooth;
+}
+
+/* Keep scrollbar inside main content */
+.main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main::-webkit-scrollbar-thumb {
+  background: #c5d4e8;
+  border-radius: 10px;
+}
+
+.main::-webkit-scrollbar-thumb:hover {
+  background: #9eb5d2;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.family-dashboard-loading {
+  width: 100%;
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  background: #f5f8fc;
+  color: #183b3d;
+
+  font-family:
+    "Poppins",
+    system-ui,
+    sans-serif;
+
+  text-align: center;
+}
+
+.family-dashboard-loading h2 {
+  margin: 10px 0 0;
+}
+
+.family-dashboard-loading p {
+  margin: 0;
+  color: #667085;
+}
+
+.family-loading-spinner {
+  width: 42px;
+  height: 42px;
+
+  border: 4px solid #dbeafe;
+  border-top-color: #0b5ed7;
+
+  border-radius: 50%;
+
+  animation: family-spin 0.8s linear infinite;
+}
+
+@keyframes family-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.family-dashboard-error {
+  width: 100%;
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+
+  background: #f5f8fc;
+
+  text-align: center;
+
+  font-family:
+    "Poppins",
+    system-ui,
+    sans-serif;
+}
+
+.family-dashboard-error h2 {
+  margin-bottom: 8px;
+  color: #b42318;
+}
+
+.family-dashboard-error p {
+  color: #667085;
+}
+
+.family-dashboard-error button {
+  margin-top: 15px;
+
+  padding: 11px 22px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #0b5ed7;
+  color: white;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}

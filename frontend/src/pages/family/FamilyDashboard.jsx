@@ -1,1164 +1,265 @@
 import React, { useEffect, useState } from "react";
+import {
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
-import FamilySidebar from "../../components/family/FamilySidebar";
 import FamilyHeader from "../../components/family/FamilyHeader";
-import ElderSelector from "../../components/family/ElderSelector";
+import FamilySidebar from "../../components/family/FamilySidebar";
 
 import OverviewSection from "../../components/family/OverviewSection";
-import MedicinesSection from "../../components/family/MedicinesSection";
-import AppointmentsSection from "../../components/family/AppointmentsSection";
-import EmergencyContactsSection from "../../components/family/EmergencyContactsSection";
-import ProfileSection from "../../components/family/ProfileSection";
-
-import ConnectElder from "../../components/ConnectElder";
+import AppointmentsPage from "../../components/family/AppointmentsPage";
+import MedicinePage from "../../components/family/MedicinePage";
+import AICompanionPage from "../../components/family/AICompanionPage";
+import NotificationsPage from "../../components/family/NotificationsPage";
+import ParentProfilePage from "../../components/family/ParentProfilePage";
+import SettingsPage from "../../components/family/SettingsPage";
+import HelpPage from "../../components/family/HelpPage";
 
 import {
   getMe,
   getFamilyProfile,
   getConnectedElders,
-
-  getMedicines,
-  createMedicine,
-  updateMedicine,
-  deleteMedicine,
-
-  getAppointments,
-  createAppointment,
-  updateAppointment,
-  deleteAppointment,
-
-  getEmergencyContacts,
-  createEmergencyContact,
-  updateEmergencyContact,
-  deleteEmergencyContact,
 } from "../../services/api/familyApi";
 
+import "../../styles/family/FamilyDashboard.css";
 
 export default function FamilyDashboard() {
-
-  /* =====================================================
-     BASIC USER / FAMILY DATA
-  ===================================================== */
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [user, setUser] = useState(null);
-
-  const [familyProfile, setFamilyProfile] =
-    useState(null);
-
-
-  /* =====================================================
-     CONNECTED ELDERS
-  ===================================================== */
-
+  const [familyProfile, setFamilyProfile] = useState(null);
   const [elders, setElders] = useState([]);
+  const [selectedElder, setSelectedElder] = useState(null);
 
-  const [selectedElder, setSelectedElder] =
-    useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
+  const location = useLocation();
 
-  /* =====================================================
-     ELDER DATA
-  ===================================================== */
-
-  const [medicines, setMedicines] =
-    useState([]);
-
-  const [appointments, setAppointments] =
-    useState([]);
-
-  const [emergencyContacts, setEmergencyContacts] =
-    useState([]);
-
-
-  /* =====================================================
-     DASHBOARD STATE
-  ===================================================== */
-
-  const [activeSection, setActiveSection] =
-    useState("overview");
-
-  const [dashboardLoading, setDashboardLoading] =
-    useState(true);
-
-  const [elderDataLoading, setElderDataLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-
-  /* =====================================================
-     INITIAL DASHBOARD LOAD
-  ===================================================== */
+  // =========================================================
+  // LOAD FAMILY DASHBOARD DATA
+  // =========================================================
 
   useEffect(() => {
+    async function loadDashboard() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [meData, familyData, elderData] =
+          await Promise.all([
+            getMe(),
+            getFamilyProfile(),
+            getConnectedElders(),
+          ]);
+
+        // Backend returns { user: {...} }
+        const loggedInUser = meData?.user || null;
+
+        const connectedElders = Array.isArray(elderData)
+          ? elderData
+          : Array.isArray(elderData?.results)
+            ? elderData.results
+            : [];
+
+        console.log("LOGGED IN USER:", loggedInUser);
+        console.log("FAMILY PROFILE:", familyData);
+        console.log("CONNECTED ELDERS:", connectedElders);
+
+        setUser(loggedInUser);
+        setFamilyProfile(familyData);
+        setElders(connectedElders);
+
+        // Select first connected elder automatically
+        if (connectedElders.length > 0) {
+          setSelectedElder(connectedElders[0]);
+        } else {
+          setSelectedElder(null);
+        }
+
+      } catch (err) {
+        console.error(
+          "Family dashboard loading error:",
+          err
+        );
+
+        setError(
+          err.message ||
+          "Unable to load family dashboard."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
     loadDashboard();
   }, []);
 
-
-  /* =====================================================
-     LOAD DATA WHEN ELDER CHANGES
-  ===================================================== */
+  // =========================================================
+  // SCROLL TO TOP WHEN PAGE CHANGES
+  // =========================================================
 
   useEffect(() => {
-
-    if (selectedElder?.id) {
-
-      loadElderData(
-        selectedElder.id
-      );
-
-    } else {
-
-      setMedicines([]);
-      setAppointments([]);
-      setEmergencyContacts([]);
-
-    }
-
-  }, [selectedElder]);
-
-
-  /* =====================================================
-     LOAD FAMILY DASHBOARD
-  ===================================================== */
-
-  async function loadDashboard() {
-
-    try {
-
-      setDashboardLoading(true);
-      setError("");
-
-      const [
-        meData,
-        familyData,
-        elderData,
-      ] = await Promise.all([
-        getMe(),
-        getFamilyProfile(),
-        getConnectedElders(),
-      ]);
-
-
-      /* -------------------------------
-         USER
-      ------------------------------- */
-
-      setUser(meData);
-
-
-      /* -------------------------------
-         FAMILY PROFILE
-      ------------------------------- */
-
-      setFamilyProfile(
-        familyData
-      );
-
-
-      /* -------------------------------
-         CONNECTED ELDERS
-      ------------------------------- */
-
-      const elderList =
-        Array.isArray(elderData)
-          ? elderData
-          : Array.isArray(
-              elderData?.results
-            )
-          ? elderData.results
-          : [];
-
-
-      setElders(
-        elderList
-      );
-
-
-      /* -------------------------------
-         SELECT FIRST ELDER
-      ------------------------------- */
-
-      if (elderList.length > 0) {
-
-        setSelectedElder(
-          elderList[0]
-        );
-
-      } else {
-
-        setSelectedElder(
-          null
-        );
-
-      }
-
-    } catch (err) {
-
-      console.error(
-        "Family dashboard load error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to load family dashboard data."
-      );
-
-    } finally {
-
-      setDashboardLoading(false);
-
-    }
-
-  }
-
-
-  /* =====================================================
-     LOAD SELECTED ELDER DATA
-  ===================================================== */
-
-  async function loadElderData(
-    elderId
-  ) {
-
-    try {
-
-      setElderDataLoading(true);
-      setError("");
-
-      const [
-        medicineData,
-        appointmentData,
-        emergencyData,
-      ] = await Promise.all([
-
-        getMedicines(
-          elderId
-        ),
-
-        getAppointments(
-          elderId
-        ),
-
-        getEmergencyContacts(
-          elderId
-        ),
-
-      ]);
-
-
-      /* -------------------------------
-         MEDICINES
-      ------------------------------- */
-
-      setMedicines(
-        Array.isArray(
-          medicineData
-        )
-          ? medicineData
-          : []
-      );
-
-
-      /* -------------------------------
-         APPOINTMENTS
-      ------------------------------- */
-
-      setAppointments(
-        Array.isArray(
-          appointmentData
-        )
-          ? appointmentData
-          : []
-      );
-
-
-      /* -------------------------------
-         EMERGENCY CONTACTS
-      ------------------------------- */
-
-      setEmergencyContacts(
-        Array.isArray(
-          emergencyData
-        )
-          ? emergencyData
-          : []
-      );
-
-
-    } catch (err) {
-
-      console.error(
-        "Elder data load error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to load elder data."
-      );
-
-    } finally {
-
-      setElderDataLoading(false);
-
-    }
-
-  }
-
-
-  /* =====================================================
-     REFRESH ELDER DATA
-  ===================================================== */
-
-  async function refreshElderData() {
-
-    if (!selectedElder?.id) {
-      return;
-    }
-
-    await loadElderData(
-      selectedElder.id
-    );
-
-  }
-
-
-  /* =====================================================
-     CONNECT ELDER SUCCESS
-  ===================================================== */
-
-  async function handleConnectionSuccess() {
-
-    try {
-
-      setError("");
-
-      /*
-       * Reload connected elders.
-       *
-       * This is important because the newly
-       * accepted connection should appear
-       * inside ElderSelector.
-       */
-
-      const elderData =
-        await getConnectedElders();
-
-
-      const elderList =
-        Array.isArray(elderData)
-          ? elderData
-          : Array.isArray(
-              elderData?.results
-            )
-          ? elderData.results
-          : [];
-
-
-      setElders(
-        elderList
-      );
-
-
-      /*
-       * Select the newly connected elder.
-       *
-       * If there was no elder before,
-       * select the first one.
-       */
-
-      if (elderList.length > 0) {
-
-        setSelectedElder(
-          elderList[
-            elderList.length - 1
-          ]
-        );
-
-      }
-
-
-      /*
-       * Move user back to overview
-       */
-
-      setActiveSection(
-        "overview"
-      );
-
-
-    } catch (err) {
-
-      console.error(
-        "Refresh connected elders error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Connection was successful, but the dashboard could not be refreshed."
-      );
-
-    }
-
-  }
-
-
-  /* =====================================================
-     MEDICINES
-  ===================================================== */
-
-  async function handleCreateMedicine(
-    data
-  ) {
-
-    try {
-
-      setError("");
-
-      await createMedicine({
-
-        ...data,
-
-        elder_id:
-          selectedElder.id,
-
+    if (location.hash) return;
+
+    const main = document.querySelector(".main");
+
+    if (main) {
+      main.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
       });
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Create medicine error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to add medicine."
-      );
-
-      throw err;
-
     }
+  }, [location.pathname, location.hash]);
 
-  }
+  // =========================================================
+  // LOADING
+  // =========================================================
 
-
-  async function handleUpdateMedicine(
-    id,
-    data
-  ) {
-
-    try {
-
-      setError("");
-
-      await updateMedicine(
-        id,
-        data
-      );
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Update medicine error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to update medicine."
-      );
-
-      throw err;
-
-    }
-
-  }
-
-
-  async function handleDeleteMedicine(
-    id
-  ) {
-
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this medicine?"
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-
-      setError("");
-
-      await deleteMedicine(
-        id
-      );
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Delete medicine error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to delete medicine."
-      );
-
-    }
-
-  }
-
-
-  /* =====================================================
-     APPOINTMENTS
-  ===================================================== */
-
-  async function handleCreateAppointment(
-    data
-  ) {
-
-    try {
-
-      setError("");
-
-      await createAppointment({
-
-        ...data,
-
-        elder_id:
-          selectedElder.id,
-
-      });
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Create appointment error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to add appointment."
-      );
-
-      throw err;
-
-    }
-
-  }
-
-
-  async function handleUpdateAppointment(
-    id,
-    data
-  ) {
-
-    try {
-
-      setError("");
-
-      await updateAppointment(
-        id,
-        data
-      );
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Update appointment error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to update appointment."
-      );
-
-      throw err;
-
-    }
-
-  }
-
-
-  async function handleDeleteAppointment(
-    id
-  ) {
-
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this appointment?"
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-
-      setError("");
-
-      await deleteAppointment(
-        id
-      );
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Delete appointment error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to delete appointment."
-      );
-
-    }
-
-  }
-
-
-  /* =====================================================
-     EMERGENCY CONTACTS
-  ===================================================== */
-
-  async function handleCreateEmergencyContact(
-    data
-  ) {
-
-    try {
-
-      setError("");
-
-      await createEmergencyContact({
-
-        ...data,
-
-        elder_id:
-          selectedElder.id,
-
-      });
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Create emergency contact error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to add emergency contact."
-      );
-
-      throw err;
-
-    }
-
-  }
-
-
-  async function handleUpdateEmergencyContact(
-    id,
-    data
-  ) {
-
-    try {
-
-      setError("");
-
-      await updateEmergencyContact(
-        id,
-        data
-      );
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Update emergency contact error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to update emergency contact."
-      );
-
-      throw err;
-
-    }
-
-  }
-
-
-  async function handleDeleteEmergencyContact(
-    id
-  ) {
-
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this emergency contact?"
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-
-      setError("");
-
-      await deleteEmergencyContact(
-        id
-      );
-
-      await refreshElderData();
-
-    } catch (err) {
-
-      console.error(
-        "Delete emergency contact error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to delete emergency contact."
-      );
-
-    }
-
-  }
-
-
-  /* =====================================================
-     LOADING SCREEN
-  ===================================================== */
-
-  if (dashboardLoading) {
-
+  if (loading) {
     return (
-      <div className="family-loading-screen">
-
-        <div className="big-spinner" />
-
-        <h2>
-          Loading CareConnect...
-        </h2>
-
+      <div className="family-dashboard-loading">
+        <div className="family-loading-spinner"></div>
+        <h2>Loading CareConnect...</h2>
         <p>
-          Preparing your family dashboard
+          Preparing your family care dashboard.
         </p>
-
       </div>
     );
-
   }
 
+  // =========================================================
+  // ERROR
+  // =========================================================
 
-  /* =====================================================
-     RENDER
-  ===================================================== */
+  if (error) {
+    return (
+      <div className="family-dashboard-error">
+        <h2>Unable to load dashboard</h2>
+        <p>{error}</p>
+
+        <button
+          onClick={() => window.location.reload()}
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // DASHBOARD
+  // =========================================================
 
   return (
+    <div className="dashboard">
 
-    <div className="family-dashboard-shell">
-
-      {/* =================================================
-          SIDEBAR
-      ================================================= */}
-
-      <FamilySidebar
-
-        activeSection={
-          activeSection
-        }
-
-        onChange={
-          setActiveSection
-        }
-
-        user={
-          user
-        }
-
+      <FamilyHeader
+        user={user}
+        familyProfile={familyProfile}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
       />
 
+      <div className="dashboard-body">
 
-      {/* =================================================
-          MAIN
-      ================================================= */}
-
-      <div className="family-dashboard-main">
-
-        <FamilyHeader
-          user={user}
+        <FamilySidebar
+          sidebarOpen={sidebarOpen}
         />
 
+        <main className="main">
 
-        {/* =================================================
-            ERROR
-        ================================================= */}
+          <Routes>
 
-        {error && (
-
-          <div className="family-error-banner">
-
-            <div>
-
-              <strong>
-                Unable to complete the request
-              </strong>
-
-              <span>
-                {error}
-              </span>
-
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-
-                setError("");
-
-                if (
-                  selectedElder?.id
-                ) {
-
-                  loadElderData(
-                    selectedElder.id
-                  );
-
-                } else {
-
-                  loadDashboard();
-
-                }
-
-              }}
-            >
-              Retry
-            </button>
-
-          </div>
-
-        )}
-
-
-        {/* =================================================
-            DASHBOARD CONTENT
-        ================================================= */}
-
-        <main className="family-dashboard-content">
-
-
-          {/* =================================================
-              CONNECT ELDER SECTION
-
-              IMPORTANT:
-              This is outside the selected-elder condition.
-
-              Therefore a family member can connect an elder
-              even when they currently have ZERO elders.
-          ================================================= */}
-
-          {activeSection === "connect" && (
-
-            <ConnectElder
-
-              onSuccess={
-                handleConnectionSuccess
-              }
-
-            />
-
-          )}
-
-
-          {/* =================================================
-              ELDER SELECTOR
-
-              Hide it while the user is connecting an elder.
-          ================================================= */}
-
-          {activeSection !== "connect" && (
-
-            <ElderSelector
-
-              elders={
-                elders
-              }
-
-              selectedElder={
-                selectedElder
-              }
-
-              onChange={
-                setSelectedElder
-              }
-
-            />
-
-          )}
-
-
-          {/* =================================================
-              NO ELDER
-          ================================================= */}
-
-          {activeSection !== "connect" &&
-            !selectedElder ? (
-
-            <NoElderState
-              onConnect={() =>
-                setActiveSection(
-                  "connect"
-                )
-              }
-            />
-
-          ) : null}
-
-
-          {/* =================================================
-              CONNECTED ELDER DASHBOARD
-          ================================================= */}
-
-          {activeSection !== "connect" &&
-            selectedElder && (
-
-            <>
-
-              {/* ---------------------------------------------
-                  OVERVIEW
-              --------------------------------------------- */}
-
-              {activeSection === "overview" && (
-
+            {/* OVERVIEW */}
+            <Route
+              index
+              element={
                 <OverviewSection
-
-                  medicines={
-                    medicines
-                  }
-
-                  appointments={
-                    appointments
-                  }
-
-                  contacts={
-                    emergencyContacts
-                  }
-
-                  onNavigate={
-                    setActiveSection
-                  }
-
+                  user={user}
+                  familyProfile={familyProfile}
+                  selectedElder={selectedElder}
                 />
+              }
+            />
 
-              )}
-
-
-              {/* ---------------------------------------------
-                  MEDICINES
-              --------------------------------------------- */}
-
-              {activeSection === "medicines" && (
-
-                <MedicinesSection
-
-                  medicines={
-                    medicines
-                  }
-
-                  loading={
-                    elderDataLoading
-                  }
-
-                  onCreate={
-                    handleCreateMedicine
-                  }
-
-                  onUpdate={
-                    handleUpdateMedicine
-                  }
-
-                  onDelete={
-                    handleDeleteMedicine
-                  }
-
+            {/* APPOINTMENTS */}
+            <Route
+              path="appointments"
+              element={
+                <AppointmentsPage
+                  selectedElder={selectedElder}
+                  elders={elders}
                 />
+              }
+            />
 
-              )}
-
-
-              {/* ---------------------------------------------
-                  APPOINTMENTS
-              --------------------------------------------- */}
-
-              {activeSection ===
-                "appointments" && (
-
-                <AppointmentsSection
-
-                  appointments={
-                    appointments
-                  }
-
-                  loading={
-                    elderDataLoading
-                  }
-
-                  onCreate={
-                    handleCreateAppointment
-                  }
-
-                  onUpdate={
-                    handleUpdateAppointment
-                  }
-
-                  onDelete={
-                    handleDeleteAppointment
-                  }
-
+            {/* MEDICINES */}
+            <Route
+              path="medicine"
+              element={
+                <MedicinePage
+                  selectedElder={selectedElder}
                 />
+              }
+            />
 
-              )}
-
-
-              {/* ---------------------------------------------
-                  EMERGENCY CONTACTS
-              --------------------------------------------- */}
-
-              {activeSection ===
-                "emergency" && (
-
-                <EmergencyContactsSection
-
-                  contacts={
-                    emergencyContacts
-                  }
-
-                  loading={
-                    elderDataLoading
-                  }
-
-                  onCreate={
-                    handleCreateEmergencyContact
-                  }
-
-                  onUpdate={
-                    handleUpdateEmergencyContact
-                  }
-
-                  onDelete={
-                    handleDeleteEmergencyContact
-                  }
-
+            {/* AI COMPANION */}
+            <Route
+              path="ai-companion"
+              element={
+                <AICompanionPage
+                  selectedElder={selectedElder}
                 />
+              }
+            />
 
-              )}
-
-
-              {/* ---------------------------------------------
-                  FAMILY PROFILE
-              --------------------------------------------- */}
-
-              {activeSection === "profile" && (
-
-                <ProfileSection
-
-                  user={
-                    user
-                  }
-
-                  profile={
-                    familyProfile
-                  }
-
+            {/* NOTIFICATIONS */}
+            <Route
+              path="notifications"
+              element={
+                <NotificationsPage
+                  selectedElder={selectedElder}
                 />
+              }
+            />
 
-              )}
+            {/* PROFILE */}
+            <Route
+              path="profile"
+              element={
+                <ParentProfilePage
+                  selectedElder={selectedElder}
+                />
+              }
+            />
 
-            </>
+            {/* SETTINGS */}
+            <Route
+              path="settings"
+              element={
+                <SettingsPage
+                  user={user}
+                  familyProfile={familyProfile}
+                />
+              }
+            />
 
-          )}
+            {/* HELP */}
+            <Route
+              path="help"
+              element={<HelpPage />}
+            />
+
+          </Routes>
 
         </main>
 
       </div>
 
     </div>
-
   );
-
-}
-
-
-/* =========================================================
-   NO ELDER STATE
-========================================================= */
-
-function NoElderState({
-  onConnect,
-}) {
-
-  return (
-
-    <section className="no-elder-state">
-
-      <div className="no-elder-icon">
-        ♥
-      </div>
-
-      <h2>
-        No elder connected yet
-      </h2>
-
-      <p>
-        Connect with an elder using their
-        CareConnect ID to start managing
-        medicines, appointments and
-        emergency contacts.
-      </p>
-
-      <button
-        type="button"
-        className="connect-elder-button"
-        onClick={onConnect}
-      >
-        Connect an Elder
-      </button>
-
-    </section>
-
-  );
-
 }

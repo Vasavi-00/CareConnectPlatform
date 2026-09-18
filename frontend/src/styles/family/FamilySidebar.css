@@ -1,0 +1,160 @@
+/* =====================================================
+   FAMILY SIDEBAR
+===================================================== */
+
+.family-sidebar {
+  width: 220px;
+  min-width: 220px;
+  height: calc(100vh - 78px);
+  box-sizing: border-box;
+  padding: 22px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-right: 1px solid #e3e7f0;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition:
+    width 0.25s ease,
+    min-width 0.25s ease,
+    padding 0.25s ease,
+    border 0.25s ease;
+}
+
+
+/* =====================================================
+   OPEN
+===================================================== */
+
+.family-sidebar.open {
+  width: 220px;
+  min-width: 220px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-right: 1px solid #e3e7f0;
+}
+
+
+/* =====================================================
+   CLOSED
+===================================================== */
+
+.family-sidebar.closed {
+  width: 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right: none;
+}
+
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
+
+.sidebar-navigation {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+
+/* Hide scrollbar but keep scrolling */
+
+.sidebar-navigation::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-navigation::-webkit-scrollbar-thumb {
+  background: #d9e5f0;
+  border-radius: 10px;
+}
+
+
+/* =====================================================
+   NAVIGATION LINK
+===================================================== */
+
+.sidebar-nav-link {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  color: #515d79;
+  text-decoration: none;
+  font-family:
+    "Poppins",
+    system-ui,
+    sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+
+/* =====================================================
+   ICONS
+===================================================== */
+
+.sidebar-nav-link svg {
+  width: 17px;
+  min-width: 17px;
+  font-size: 16px;
+}
+
+
+/* =====================================================
+   HOVER
+===================================================== */
+
+.sidebar-nav-link:hover {
+  background: #f1f5ff;
+  color: #0b5ed7;
+}
+
+
+/* =====================================================
+   ACTIVE
+===================================================== */
+
+.sidebar-nav-link.active {
+  background: #e8f2ff;
+  color: #0b5ed7;
+  font-weight: 600;
+}
+
+/* =====================================================
+   FULL ILLUSTRATION
+===================================================== */
+
+.sidebar-care-image {
+  width: 78%;
+  height: 70%;
+  display: block;
+  object-fit: contain;
+  object-position: center bottom;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+
+/* =====================================================
+   COLLAPSED SIDEBAR
+===================================================== */
+
+.family-sidebar.closed .sidebar-care-card {
+  display: none;
+}

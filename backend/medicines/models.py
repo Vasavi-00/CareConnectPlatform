@@ -20,7 +20,20 @@ class Medicine(models.Model):
     )
 
     frequency = models.CharField(
-        max_length=20
+        max_length=100,
+        default="Once daily"
+    )
+
+    timing = models.CharField(
+        max_length=100,
+        blank=True,
+        default=""
+    )
+
+    prescribed_by = models.CharField(
+        max_length=150,
+        blank=True,
+        default=""
     )
 
     purchase_date = models.DateField(
@@ -28,11 +41,18 @@ class Medicine(models.Model):
         blank=True
     )
 
-    start_date = models.DateField()
+    start_date = models.DateField(
+        null=True,
+        blank=True
+    )
 
     end_date = models.DateField(
         null=True,
         blank=True
+    )
+
+    refill_threshold = models.PositiveIntegerField(
+        default=5
     )
 
     low_stock_threshold = models.PositiveIntegerField(
@@ -56,7 +76,9 @@ class Medicine(models.Model):
     )
 
     food_timing = models.CharField(
-        max_length=10
+        max_length=10,
+        blank=True,
+        default="ANY"
     )
 
     notes = models.CharField(

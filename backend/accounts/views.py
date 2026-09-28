@@ -269,6 +269,222 @@ class FamilyProfileView(APIView):
             serializer.data
         )
 
+class ConnectElderView(APIView):
+    """
+    Directly connect a family member to an elder
+    using the elder's CareConnect ID.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        # -------------------------------------------------
+        # 1. Only FAMILY users can connect to elders
+        # -------------------------------------------------
+
+        if request.user.role != User.Role.FAMILY:
+
+            return Response(
+                {
+                    "detail": (
+                        "Only family members can "
+                        "connect to elders."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+
+        # -------------------------------------------------
+        # 2. Get CareConnect ID
+        # -------------------------------------------------
+
+        careconnect_id = (
+            request.data.get("careconnect_id")
+        )
+
+
+        if not careconnect_id:
+
+            return Response(
+                {
+                    "detail": (
+                        "CareConnect ID is required."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+        careconnect_id = (
+            str(careconnect_id)
+            .strip()
+            .upper()
+        )
+
+
+        # -------------------------------------------------
+        # 3. Find the elder
+        # -------------------------------------------------
+
+        try:
+
+            elder = (
+                ElderProfile.objects
+                .select_related("user")
+                .get(
+                    careconnect_id=careconnect_id
+                )
+            )
+
+        except ElderProfile.DoesNotExist:
+
+            return Response(
+                {
+                    "detail": (
+                        "No elder found with "
+                        f"CareConnect ID {careconnect_id}."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+
+        # -------------------------------------------------
+        # 4. Get family profile
+        # -------------------------------------------------
+
+        try:
+
+            family = request.user.family_profile
+
+        except FamilyProfile.DoesNotExist:
+
+            return Response(
+                {
+                    "detail": (
+                        "Family profile not found."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+        # -------------------------------------------------
+        # 5. Prevent duplicate connection
+        # -------------------------------------------------
+
+        relationship = (
+            FamilyElderRelationship.objects.filter(
+                family=family,
+                elder=elder,
+            ).first()
+        )
+
+
+        if relationship:
+
+            if relationship.is_active:
+
+                return Response(
+                    {
+                        "detail": (
+                            "You are already connected "
+                            "to this elder."
+                        ),
+                        "connected": True,
+                        "elder": {
+                            "id": elder.id,
+                            "careconnect_id": (
+                                elder.careconnect_id
+                            ),
+                            "name": (
+                                f"{elder.user.first_name} "
+                                f"{elder.user.last_name}"
+                            ).strip()
+                            or elder.user.email,
+                        },
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+
+            # Reactivate an old inactive connection
+
+            relationship.is_active = True
+            relationship.save(
+                update_fields=[
+                    "is_active",
+                    "updated_at",
+                ]
+            )
+
+        else:
+
+            # -------------------------------------------------
+            # 6. Create new relationship
+            # -------------------------------------------------
+
+            relationship = (
+                FamilyElderRelationship.objects.create(
+                    family=family,
+                    elder=elder,
+                    is_active=True,
+                )
+            )
+
+
+        # -------------------------------------------------
+        # 7. Return connected elder
+        # -------------------------------------------------
+
+        full_name = (
+            f"{elder.user.first_name} "
+            f"{elder.user.last_name}"
+        ).strip()
+
+
+        return Response(
+            {
+                "detail": (
+                    "Elder connected successfully."
+                ),
+
+                "connected": True,
+
+                "elder": {
+                    "id": elder.id,
+
+                    "careconnect_id":
+                        elder.careconnect_id,
+
+                    "name":
+                        full_name
+                        or elder.user.email,
+
+                    "city":
+                        elder.city,
+
+                    "state":
+                        elder.state,
+
+                    "preferred_language":
+                        elder.preferred_language,
+
+                    "profile_photo": (
+                        request.build_absolute_uri(
+                            elder.profile_photo.url
+                        )
+                        if elder.profile_photo
+                        else None
+                    ),
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 
 # ============================================================
 # SEND CONNECTION REQUEST
@@ -316,7 +532,131 @@ class ConnectionRequestCreateView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+# ============================================================
+# FIND ELDER BY CARECONNECT ID
+# ============================================================
 
+class FindElderView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, careconnect_id):
+
+        # ----------------------------------------------------
+        # ONLY FAMILY MEMBERS CAN SEARCH FOR ELDERS
+        # ----------------------------------------------------
+
+        if request.user.role != User.Role.FAMILY:
+
+            return Response(
+                {
+                    "error": (
+                        "Only family members can "
+                        "search for elders."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # ----------------------------------------------------
+        # CLEAN CARECONNECT ID
+        # ----------------------------------------------------
+
+        careconnect_id = careconnect_id.strip().upper()
+
+        # ----------------------------------------------------
+        # FIND ELDER
+        # ----------------------------------------------------
+
+        try:
+
+            elder = (
+                ElderProfile.objects
+                .select_related("user")
+                .get(
+                    careconnect_id=careconnect_id
+                )
+            )
+
+        except ElderProfile.DoesNotExist:
+
+            return Response(
+                {
+                    "error": (
+                        "No elder found with this "
+                        "CareConnect ID."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # ----------------------------------------------------
+        # CHECK IF ALREADY CONNECTED
+        # ----------------------------------------------------
+
+        family = request.user.family_profile
+
+        already_connected = (
+            FamilyElderRelationship.objects.filter(
+                family=family,
+                elder=elder,
+                is_active=True
+            ).exists()
+        )
+
+        if already_connected:
+
+            return Response(
+                {
+                    "error": (
+                        "You are already connected "
+                        "to this elder."
+                    ),
+                    "connected": True
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ----------------------------------------------------
+        # CHECK PENDING REQUEST
+        # ----------------------------------------------------
+
+        request_pending = (
+            ConnectionRequest.objects.filter(
+                family=family,
+                elder=elder,
+                status=ConnectionRequest.Status.PENDING
+            ).exists()
+        )
+
+        # ----------------------------------------------------
+        # RETURN SAFE ELDER PREVIEW
+        # ----------------------------------------------------
+
+        return Response(
+            {
+                "careconnect_id": elder.careconnect_id,
+                "name": (
+                    f"{elder.user.first_name} "
+                    f"{elder.user.last_name}"
+                ).strip(),
+                "city": elder.city,
+                "state": elder.state,
+                "preferred_language": (
+                    elder.preferred_language
+                ),
+                "profile_photo": (
+                    request.build_absolute_uri(
+                        elder.profile_photo.url
+                    )
+                    if elder.profile_photo
+                    else None
+                ),
+                "request_pending": request_pending,
+                "connected": False
+            },
+            status=status.HTTP_200_OK
+        )
 # ============================================================
 # FAMILY SENT CONNECTION REQUESTS
 # ============================================================
@@ -362,7 +702,126 @@ class FamilyConnectionRequestsView(APIView):
             serializer.data
         )
 
+class FamilyConnectedEldersView(APIView):
 
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != User.Role.FAMILY:
+
+            return Response(
+                {
+                    "error": (
+                        "Only family members can "
+                        "access this."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+
+            family = request.user.family_profile
+
+        except FamilyProfile.DoesNotExist:
+
+            return Response(
+                {
+                    "error": "Family profile not found."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        relationships = (
+            FamilyElderRelationship.objects
+            .filter(
+                family=family,
+                is_active=True
+            )
+            .select_related(
+                "elder__user"
+            )
+            .order_by("-created_at")
+        )
+
+        result = []
+
+        for relationship in relationships:
+
+            elder = relationship.elder
+
+            full_name = (
+                f"{elder.user.first_name} "
+                f"{elder.user.last_name}"
+            ).strip()
+
+            result.append(
+                {
+                    # IMPORTANT:
+                    # This is ElderProfile.id,
+                    # NOT FamilyElderRelationship.id
+                    "id": elder.id,
+
+                    "careconnect_id":
+                        elder.careconnect_id,
+
+                    "name":
+                        full_name
+                        or elder.user.email,
+
+                    "email":
+                        elder.user.email,
+
+                    "city":
+                        elder.city,
+
+                    "state":
+                        elder.state,
+
+                    "preferred_language":
+                        elder.preferred_language,
+
+                    "profile_photo": (
+                        request.build_absolute_uri(
+                            elder.profile_photo.url
+                        )
+                        if elder.profile_photo
+                        else None
+                    ),
+
+                    # Relationship information
+                    "relationship_type":
+                        relationship.relationship_type,
+
+                    "is_primary_caregiver":
+                        relationship.is_primary_caregiver,
+
+                    "can_manage_medicines":
+                        relationship.can_manage_medicines,
+
+                    "can_manage_appointments":
+                        relationship.can_manage_appointments,
+
+                    "can_manage_emergency_contacts":
+                        relationship.can_manage_emergency_contacts,
+
+                    "can_receive_sos":
+                        relationship.can_receive_sos,
+
+                    "is_active":
+                        relationship.is_active,
+
+                    # Keep relationship ID available separately
+                    "relationship_id":
+                        relationship.id,
+                }
+            )
+
+        return Response(
+            result,
+            status=status.HTTP_200_OK
+        )
 # ============================================================
 # ELDER RECEIVED CONNECTION REQUESTS
 # ============================================================

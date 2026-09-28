@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from accounts.models import FamilyElderRelationship
 from notifications.services import (
     create_appointment_notification,
+    create_appointment_updated_notification,
+    create_appointment_cancelled_notification,
 )
 
 from .models import Appointment
@@ -126,8 +128,10 @@ class AppointmentListCreateView(
         )
 
     def perform_create(self, serializer):
-        elder_id = self.request.data.get(
-            "elder_id"
+        elder_id = (
+            self.request.data.get("elder_id")
+            or self.request.data.get("elder")
+            or self.request.query_params.get("elder_id")
         )
 
         elder, family_profile = (
@@ -195,6 +199,7 @@ class AppointmentDetailView(
 
         requested_elder_id = (
             self.request.data.get("elder_id")
+            or self.request.data.get("elder")
         )
 
         if (
@@ -207,4 +212,16 @@ class AppointmentDetailView(
                 "to another elder."
             )
 
-        serializer.save()
+        updated_appointment = serializer.save()
+
+        create_appointment_updated_notification(
+            elder=updated_appointment.elder,
+            appointment=updated_appointment,
+        )
+
+    def perform_destroy(self, instance):
+        create_appointment_cancelled_notification(
+            elder=instance.elder,
+            appointment=instance,
+        )
+        instance.delete()

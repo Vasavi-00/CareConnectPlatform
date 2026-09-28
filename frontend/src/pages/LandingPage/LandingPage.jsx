@@ -30,9 +30,7 @@ function LandingPage() {
         <Statistics />
 
         <Testimonials />
-
         <FAQ />
-
         <CTA />
       </main>
 

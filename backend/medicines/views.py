@@ -7,8 +7,10 @@ from accounts.models import FamilyElderRelationship
 from .models import Medicine
 from .serializers import MedicineSerializer
 from notifications.services import (
-    create_medicine_notification,
+    create_new_medicine_notification,
+    check_and_create_stock_notifications,
 )
+
 
 class MedicineAccessMixin:
     def check_elder_access(self, elder_id, write=False):
@@ -105,8 +107,10 @@ class MedicineListCreateView(
         )
 
     def perform_create(self, serializer):
-        elder_id = self.request.data.get(
-            "elder_id"
+        elder_id = (
+            self.request.data.get("elder_id")
+            or self.request.data.get("elder")
+            or self.request.query_params.get("elder_id")
         )
 
         elder = self.check_elder_access(
@@ -114,15 +118,18 @@ class MedicineListCreateView(
             write=True,
         )
 
-        serializer.save(
-            elder=elder
-        )
-
         medicine = serializer.save(
             elder=elder
         )
 
-        create_medicine_notification(
+        # Notify elder that a new medicine was added to their schedule
+        create_new_medicine_notification(
+            elder=elder,
+            medicine=medicine,
+        )
+
+        # Notify family if the added medicine starts out low or out of stock
+        check_and_create_stock_notifications(
             elder=elder,
             medicine=medicine,
         )
@@ -161,9 +168,11 @@ class MedicineDetailView(
 
     def perform_update(self, serializer):
         medicine = self.get_object()
+        prev_quantity = medicine.quantity
 
         requested_elder_id = (
             self.request.data.get("elder_id")
+            or self.request.data.get("elder")
         )
 
         if (
@@ -175,4 +184,11 @@ class MedicineDetailView(
                 "You cannot move a medicine to another elder."
             )
 
-        serializer.save()
+        updated_medicine = serializer.save()
+
+        # Check stock transitions and alert family if stock dropped to low or out-of-stock
+        check_and_create_stock_notifications(
+            elder=updated_medicine.elder,
+            medicine=updated_medicine,
+            previous_quantity=prev_quantity,
+        )

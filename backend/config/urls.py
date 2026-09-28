@@ -14,8 +14,11 @@ urlpatterns = [
     "api/emergency-contacts/",
     include("emergency_contacts.urls")),
     path(
-    "api/notifications/",
-    include("notifications.urls")
-),
-
-]
+        "api/notifications/",
+        include("notifications.urls")
+    ),
+    path(
+        "api/ai/",
+        include("ai_companion.urls")
+    ),
+]

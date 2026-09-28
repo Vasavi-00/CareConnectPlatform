@@ -1,395 +1,359 @@
-import { useState } from "react";
+
+import React, { useState } from "react";
+
 import {
-    FaArrowRight,
-    FaCheck,
-    FaCircleCheck,
-    FaHeart,
-    FaLink,
-    FaSpinner,
-    FaUser,
-    FaXmark,
-} from "react-icons/fa6";
+  FaIdCard,
+  FaSearch,
+  FaUserCircle,
+  FaShieldAlt,
+  FaLink,
+  FaArrowRight,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaHeart,
+} from "react-icons/fa";
 
-function ConnectElder() {
-    const [careconnectId, setCareconnectId] = useState("");
-    const [relationshipType, setRelationshipType] = useState("");
+import {
+  connectElder,
+} from "../services/api/familyApi";
 
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState("");
-    const [error, setError] = useState("");
+import "./ConnectElder.css";
 
-    const submitConnectionRequest = async (event) => {
-        event.preventDefault();
+function ConnectElder({
+  connectedElders = [],
+  onBack,
+  onSuccess,
+}) {
+  const [elderId, setElderId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
 
-        setError("");
-        setSuccess("");
+  // Check whether elder is already connected
+  const alreadyConnected = connectedElders.some(
+    (elder) =>
+      (elder.careconnect_id || elder.careconnectId || "")
+        .toLowerCase() === elderId.trim().toLowerCase()
+  );
 
-        const cleanedId = careconnectId.trim().toUpperCase();
+  const handleConnect = async (e) => {
+    e.preventDefault();
 
-        if (!cleanedId) {
-            setError("Please enter the elder's CareConnect ID.");
-            return;
-        }
+    const trimmedId = elderId.trim();
 
-        if (!/^CC-[A-Z0-9]{6}$/.test(cleanedId)) {
-            setError(
-                "Please enter a valid CareConnect ID, for example CC-7K4P92."
-            );
-            return;
-        }
+    if (!trimmedId) {
+      setStatus({
+        type: "error",
+        message:
+          "Please enter the elder's CareConnect ID.",
+      });
+      return;
+    }
 
-        setLoading(true);
+    if (alreadyConnected) {
+      setStatus({
+        type: "error",
+        message:
+          "This elder is already connected to your family.",
+      });
+      return;
+    }
 
-        try {
-            const accessToken = localStorage.getItem(
-                "careconnect_access"
-            );
+    try {
+      setLoading(true);
+      setStatus(null);
 
-            if (!accessToken) {
-                setError(
-                    "Your session has expired. Please sign in again."
-                );
-                return;
-            }
+      await connectElder(trimmedId);
 
-            const response = await fetch(
-                "/api/connections/request/",
-                {
-                    method: "POST",
+      setStatus({
+        type: "success",
+        message:
+          "Elder connected successfully!",
+      });
 
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+      setElderId("");
+      if (typeof onSuccess === "function") {
+        await onSuccess();
+      }
+    } catch (error) {
+      setStatus({
+        type: "error",
+        message:
+          error?.response?.data?.detail ||
+          error?.message ||
+          "Unable to connect elder. Please check the ID and try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                    body: JSON.stringify({
-                        careconnect_id: cleanedId,
-                        relationship_type: relationshipType,
-                    }),
-                }
-            );
+  return (
+    <div className="connect-elder-page">
 
-            const responseText = await response.text();
+      {/* =====================================
+          BACK TO FAMILY DASHBOARD
+      ====================================== */}
+      {typeof onBack === "function" && connectedElders?.length > 0 && (
+        <button
+          type="button"
+          className="back-to-family-dashboard"
+          onClick={() => {
+            onBack();
+          }}
+        >
+          <span className="back-arrow">←</span>
+          <span>Back to Family Dashboard</span>
+        </button>
+      )}
 
-            let data = {};
+      {/* =====================================
+          MAIN CONNECT ELDER CARD
+      ====================================== */}
+      <section className="connect-elder-card">
 
-            if (responseText) {
-                try {
-                    data = JSON.parse(responseText);
-                } catch {
-                    throw new Error(
-                        `Server returned an invalid response (${response.status}).`
-                    );
-                }
-            }
+        <div className="connect-elder-main">
 
-            if (!response.ok) {
-                let message =
-                    "Unable to send the connection request.";
+          {/* =====================================
+              LEFT CONTENT
+          ====================================== */}
+          <div className="connect-elder-info">
 
-                if (
-                    data &&
-                    typeof data === "object"
-                ) {
-                    const messages = Object.entries(data)
-                        .flatMap(
-                            ([field, errors]) => {
-                                const errorList =
-                                    Array.isArray(errors)
-                                        ? errors
-                                        : [errors];
+            <div className="connect-icon-wrapper">
+              <FaLink />
+            </div>
 
-                                return errorList
-                                    .filter(Boolean)
-                                    .map(
-                                        (errorMessage) => {
-                                            if (
-                                                typeof errorMessage ===
-                                                "object"
-                                            ) {
-                                                return Object.values(
-                                                    errorMessage
-                                                ).join(" ");
-                                            }
+            <div>
+              <span className="connect-eyebrow">
+                FAMILY CONNECTION
+              </span>
 
-                                            return String(
-                                                errorMessage
-                                            );
-                                        }
-                                    );
-                            }
-                        );
+              <h2>
+                Connect with an Elder
+              </h2>
 
-                    if (messages.length > 0) {
-                        message = messages.join(" ");
-                    }
-                }
+              <p>
+                Add your loved one to CareConnect
+                using their unique CareConnect ID
+                and manage their care from one place.
+              </p>
+            </div>
 
-                throw new Error(message);
-            }
+            <div className="connection-benefits">
 
-            setSuccess(
-                "Connection request sent successfully. The elder needs to accept your request."
-            );
+              {/* Private & Secure */}
+              <div className="connection-benefit">
 
-            setCareconnectId("");
-            setRelationshipType("");
-        } catch (requestError) {
-            console.error(
-                "Connection request error:",
-                requestError
-            );
-
-            if (
-                requestError.message ===
-                "Failed to fetch"
-            ) {
-                setError(
-                    "Cannot connect to the CareConnect server. Please make sure Django is running."
-                );
-            } else {
-                setError(
-                    requestError.message ||
-                        "Something went wrong. Please try again."
-                );
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <section className="connect-elder-card">
-            {/* HEADER */}
-
-            <div className="connect-elder-header">
-                <div className="connect-elder-icon">
-                    <FaLink />
+                <div className="benefit-icon">
+                  <FaShieldAlt />
                 </div>
 
                 <div>
-                    <p className="connect-elder-kicker">
-                        Family care
-                    </p>
+                  <strong>
+                    Private & Secure
+                  </strong>
 
-                    <h2>
-                        Connect with an Elder
-                    </h2>
-
-                    <p>
-                        Enter the elder's CareConnect ID
-                        to send them a connection request.
-                    </p>
+                  <span>
+                    Your connection stays protected.
+                  </span>
                 </div>
+
+              </div>
+
+              {/* Stay Connected */}
+              <div className="connection-benefit">
+
+                <div className="benefit-icon">
+                  <FaHeart />
+                </div>
+
+                <div>
+                  <strong>
+                    Stay Connected
+                  </strong>
+
+                  <span>
+                    Support and care from anywhere.
+                  </span>
+                </div>
+
+              </div>
+
             </div>
+          </div>
 
-            {/* SUCCESS */}
-
-            {success && (
-                <div
-                    className="connection-message connection-success"
-                    role="status"
-                >
-                    <FaCircleCheck />
-
-                    <span>
-                        {success}
-                    </span>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setSuccess("")
-                        }
-                        aria-label="Close success message"
-                    >
-                        <FaXmark />
-                    </button>
-                </div>
-            )}
-
-            {/* ERROR */}
-
-            {error && (
-                <div
-                    className="connection-message connection-error"
-                    role="alert"
-                >
-                    <FaXmark />
-
-                    <span>
-                        {error}
-                    </span>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setError("")
-                        }
-                        aria-label="Close error message"
-                    >
-                        <FaXmark />
-                    </button>
-                </div>
-            )}
-
-            {/* FORM */}
+          {/* =====================================
+              RIGHT FORM
+          ====================================== */}
+          <div className="connect-elder-form-area">
 
             <form
-                className="connect-elder-form"
-                onSubmit={
-                    submitConnectionRequest
-                }
+              onSubmit={handleConnect}
+              className="connect-elder-form"
             >
-                {/* CARECONNECT ID */}
 
-                <label>
-                    CareConnect ID
-                    <span className="required">
-                        *
+              {/* CareConnect ID Label */}
+              <label htmlFor="elder-careconnect-id">
+
+                <FaIdCard />
+
+                <span>
+                  CareConnect ID
+                </span>
+
+              </label>
+
+              {/* ID Input */}
+              <div
+                className={`elder-id-input-wrapper ${
+                  elderId ? "has-value" : ""
+                }`}
+              >
+
+                <FaSearch
+                  className="elder-input-icon"
+                />
+
+                <input
+                  id="elder-careconnect-id"
+                  type="text"
+                  value={elderId}
+                  onChange={(e) => {
+                    setElderId(e.target.value);
+                    setStatus(null);
+                  }}
+                  placeholder="Example: CC-ELD-1024"
+                  autoComplete="off"
+                />
+
+                {/* Clear ID */}
+                {elderId && (
+                  <button
+                    type="button"
+                    className="clear-id-button"
+                    onClick={() => {
+                      setElderId("");
+                      setStatus(null);
+                    }}
+                    aria-label="Clear CareConnect ID"
+                  >
+                    ×
+                  </button>
+                )}
+
+              </div>
+
+              {/* Help Text */}
+              <p className="input-help">
+                Ask your loved one for their
+                CareConnect ID.
+              </p>
+
+              {/* =====================================
+                  ID PREVIEW
+              ====================================== */}
+              {elderId.trim() && (
+                <div className="elder-id-preview">
+
+                  <div className="preview-avatar">
+                    <FaUserCircle />
+                  </div>
+
+                  <div className="preview-details">
+
+                    <span>
+                      Connecting with
                     </span>
 
-                    <span className="connect-input-wrap">
-                        <FaHeart />
-
-                        <input
-                            type="text"
-                            name="careconnect_id"
-                            value={
-                                careconnectId
-                            }
-                            onChange={(event) => {
-                                setCareconnectId(
-                                    event.target.value.toUpperCase()
-                                );
-
-                                setError("");
-                                setSuccess("");
-                            }}
-                            placeholder="Example: CC-7K4P92"
-                            maxLength={9}
-                            autoComplete="off"
-                            spellCheck="false"
-                            required
-                        />
-                    </span>
-
-                    <small>
-                        Ask the elder for their
-                        CareConnect ID.
-                    </small>
-                </label>
-
-                {/* RELATIONSHIP */}
-
-                <label>
-                    Relationship
-                    <span className="optional">
-                        optional
-                    </span>
-
-                    <span className="connect-input-wrap">
-                        <FaUser />
-
-                        <select
-                            name="relationship_type"
-                            value={
-                                relationshipType
-                            }
-                            onChange={(event) => {
-                                setRelationshipType(
-                                    event.target.value
-                                );
-
-                                setError("");
-                            }}
-                        >
-                            <option value="">
-                                Select relationship
-                            </option>
-
-                            <option value="Son">
-                                Son
-                            </option>
-
-                            <option value="Daughter">
-                                Daughter
-                            </option>
-
-                            <option value="Spouse">
-                                Spouse
-                            </option>
-
-                            <option value="Grandson">
-                                Grandson
-                            </option>
-
-                            <option value="Granddaughter">
-                                Granddaughter
-                            </option>
-
-                            <option value="Sibling">
-                                Sibling
-                            </option>
-
-                            <option value="Relative">
-                                Relative
-                            </option>
-
-                            <option value="Caregiver">
-                                Caregiver
-                            </option>
-
-                            <option value="Other">
-                                Other
-                            </option>
-                        </select>
-                    </span>
-                </label>
-
-                {/* SUBMIT */}
-
-                <button
-                    type="submit"
-                    className="connect-elder-submit"
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <>
-                            <FaSpinner className="spin" />
-
-                            Sending request...
-                        </>
-                    ) : (
-                        <>
-                            <FaArrowRight />
-
-                            Send Connection Request
-                        </>
-                    )}
-                </button>
-            </form>
-
-            {/* INFORMATION */}
-
-            <div className="connect-elder-info">
-                <FaCheck />
-
-                <div>
                     <strong>
-                        How does this work?
+                      {elderId.trim()}
                     </strong>
 
-                    <p>
-                        Your request will be sent to
-                        the elder. You will be connected
-                        only after they accept your
-                        request.
-                    </p>
+                  </div>
+
+                  <FaCheckCircle
+                    className="preview-check"
+                  />
+
                 </div>
+              )}
+
+              {/* =====================================
+                  STATUS MESSAGE
+              ====================================== */}
+              {status && (
+                <div
+                  className={`connection-status ${
+                    status.type === "success"
+                      ? "status-success"
+                      : "status-error"
+                  }`}
+                >
+
+                  {status.type === "success" ? (
+                    <FaCheckCircle />
+                  ) : (
+                    <FaTimesCircle />
+                  )}
+
+                  <span>
+                    {status.message}
+                  </span>
+
+                </div>
+              )}
+
+              {/* =====================================
+                  CONNECT BUTTON
+              ====================================== */}
+              <button
+                type="submit"
+                className="connect-elder-submit"
+                disabled={
+                  loading ||
+                  !elderId.trim()
+                }
+              >
+
+                {loading ? (
+                  <>
+                    <span className="connect-spinner"></span>
+
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    Connect Elder
+
+                    <FaArrowRight />
+                  </>
+                )}
+
+              </button>
+
+            </form>
+
+            {/* =====================================
+                SECURITY NOTE
+            ====================================== */}
+            <div className="connection-security-note">
+
+              <FaShieldAlt />
+
+              <span>
+                Only people with the correct
+                CareConnect ID can be connected.
+              </span>
+
             </div>
-        </section>
-    );
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  );
 }
 
 export default ConnectElder;

@@ -6,6 +6,7 @@ from .views import (
     NotificationMarkReadView,
     NotificationMarkAllReadView,
     NotificationUnreadCountView,
+    SOSActivateView,
 )
 
 
@@ -21,6 +22,7 @@ urlpatterns = [
         NotificationUnreadCountView.as_view(),
         name="notification-unread-count",
     ),
+    path("sos/activate/", SOSActivateView.as_view(), name="sos-activate"),
 
     path(
         "mark-all-read/",

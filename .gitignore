@@ -76,3 +76,15 @@ htmlcov/
 
 *.tmp
 *.temp
+
+@"
+jdk17/
+uml/
+out/
+jdk17.zip
+plantuml.jar
+"@ | Out-File -Append -Encoding utf8 .gitignorejdk17/
+uml/
+out/
+jdk17.zip
+plantuml.jar

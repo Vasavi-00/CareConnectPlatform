@@ -7,6 +7,8 @@ from .views import (
 
     ElderProfileView,
     FamilyProfileView,
+    FindElderView,
+    ConnectElderView,
 
     ConnectionRequestCreateView,
     FamilyConnectionRequestsView,
@@ -65,6 +67,26 @@ urlpatterns = [
     # ========================================================
     # CONNECTION REQUESTS
     # ========================================================
+    path(
+        "connections/connect/",
+        ConnectElderView.as_view(),
+        name="connect-elder",
+    ),
+    path(
+        "connections/elder/family/",
+        ElderConnectedFamilyView.as_view(),
+        name="elder-connected-family"
+    ),
+    path(
+        "connections/elder/requests/",
+        ElderConnectionRequestsView.as_view(),
+        name="elder-connection-requests"
+    ),
+    path(
+        "connections/elder/<str:careconnect_id>/",
+        FindElderView.as_view(),
+        name="find-elder"
+    ),
 
     path(
         "connections/request/",
@@ -76,12 +98,6 @@ urlpatterns = [
         "connections/family/requests/",
         FamilyConnectionRequestsView.as_view(),
         name="family-connection-requests"
-    ),
-
-    path(
-        "connections/elder/requests/",
-        ElderConnectionRequestsView.as_view(),
-        name="elder-connection-requests"
     ),
 
     path(
@@ -100,11 +116,6 @@ urlpatterns = [
         name="family-connected-elders"
     ),
 
-    path(
-        "connections/elder/family/",
-        ElderConnectedFamilyView.as_view(),
-        name="elder-connected-family"
-    ),
 
     path(
         "auth/forgot-password/",

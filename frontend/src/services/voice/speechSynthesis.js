@@ -1,28 +1,14 @@
-export function speakText(
-  text,
-  language = "en-IN"
-) {
-  if (
-    !text ||
-    !("speechSynthesis" in window)
-  ) {
-    return false;
-  }
+﻿export function speakText(text, language = "en-IN", rate = 1) {
+  if (!text || !("speechSynthesis" in window)) return false;
 
   window.speechSynthesis.cancel();
-
-  const utterance =
-    new SpeechSynthesisUtterance(text);
-
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = language;
-  utterance.rate = 0.85;
+  utterance.rate = rate;
   utterance.pitch = 1;
   utterance.volume = 1;
 
-  window.speechSynthesis.speak(
-    utterance
-  );
-
+  window.speechSynthesis.speak(utterance);
   return true;
 }
 
@@ -33,7 +19,5 @@ export function stopSpeaking() {
 }
 
 export function isSpeechSupported() {
-  return (
-    "speechSynthesis" in window
-  );
+  return "speechSynthesis" in window;
 }

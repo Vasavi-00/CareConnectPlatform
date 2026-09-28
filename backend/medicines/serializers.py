@@ -9,7 +9,7 @@ class MedicineSerializer(serializers.ModelSerializer):
         source="elder",
         queryset=ElderProfile.objects.all(),
         write_only=True,
-        required=True,
+        required=False,
     )
 
     elder = serializers.SerializerMethodField(
@@ -26,9 +26,12 @@ class MedicineSerializer(serializers.ModelSerializer):
             "name",
             "dosage",
             "frequency",
+            "timing",
+            "prescribed_by",
             "purchase_date",
             "start_date",
             "end_date",
+            "refill_threshold",
             "low_stock_threshold",
             "is_active",
             "created_at",
@@ -79,5 +82,10 @@ class MedicineSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "doses_per_day": "Must be at least 1."
             })
+
+        if "low_stock_threshold" in attrs and "refill_threshold" not in attrs:
+            attrs["refill_threshold"] = attrs["low_stock_threshold"]
+        elif "refill_threshold" in attrs and "low_stock_threshold" not in attrs:
+            attrs["low_stock_threshold"] = attrs["refill_threshold"]
 
         return attrs

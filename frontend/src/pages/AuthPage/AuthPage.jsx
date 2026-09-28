@@ -1,22 +1,22 @@
-import { useMemo, useState } from "react";
+
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
     FaArrowRight,
     FaCheck,
-    FaCircleCheck,
     FaEnvelope,
     FaEye,
     FaEyeSlash,
     FaHeart,
     FaLock,
     FaPhone,
-    FaShieldHeart,
+    FaShieldAlt,
     FaUser,
     FaUsers,
-    FaXmark,
-} from "react-icons/fa6";
-
+} from "react-icons/fa";
+import { FaCircleCheck } from "react-icons/fa6";
+import { FaXmark } from "react-icons/fa6";
 import "../../styles/AuthPage/auth.css";
 
 
@@ -97,43 +97,6 @@ function AuthPage({ mode }) {
 
 
     /* =====================================================
-       PASSWORD VALIDATION
-    ===================================================== */
-
-    const passwordRules = useMemo(() => {
-
-        const password = form.password || "";
-
-        return {
-            length: password.length >= 8,
-
-            uppercase: /[A-Z]/.test(password),
-
-            lowercase: /[a-z]/.test(password),
-
-            number: /\d/.test(password),
-
-            special: /[^A-Za-z0-9]/.test(password),
-        };
-
-    }, [form.password]);
-
-
-    const passwordScore =
-        Object.values(passwordRules).filter(Boolean).length;
-
-
-    const passwordStrength =
-        passwordScore <= 1
-            ? "Weak"
-            : passwordScore <= 3
-              ? "Medium"
-              : passwordScore === 4
-                ? "Strong"
-                : "Very strong";
-
-
-    /* =====================================================
        PASSWORD MATCH
     ===================================================== */
 
@@ -142,18 +105,6 @@ function AuthPage({ mode }) {
         form.password.length > 0 &&
         form.confirm_password.length > 0 &&
         form.password === form.confirm_password;
-
-
-    /* =====================================================
-       PASSWORD VALID
-    ===================================================== */
-
-    const isPasswordValid =
-        passwordRules.length &&
-        passwordRules.uppercase &&
-        passwordRules.lowercase &&
-        passwordRules.number &&
-        passwordRules.special;
 
 
     /* =====================================================
@@ -172,18 +123,6 @@ function AuthPage({ mode }) {
         ================================================= */
 
         if (!isLogin) {
-
-            /* Password validation */
-
-            if (!isPasswordValid) {
-
-                setError(
-                    "Please create a stronger password using all the requirements shown below."
-                );
-
-                return;
-            }
-
 
             /* Confirm password validation */
 
@@ -458,22 +397,25 @@ function AuthPage({ mode }) {
 
     /* =========================================================
        CONTINUE TO LOGIN
-       
-       THIS IS THE IMPORTANT CHANGE
     ========================================================= */
 
     const continueToLogin = () => {
-    setAccountCreated(false);
 
-    setForm({
-        email: "",
-        password: "",
-    });
+        setAccountCreated(false);
 
-    setError("");
+        setForm({
+            email: "",
+            password: "",
+        });
 
-    navigate("/login", { replace: true });
-};
+        setError("");
+
+        navigate("/login", {
+            replace: true,
+        });
+    };
+
+
     /* =========================================================
        SUCCESS SCREEN AFTER SIGNUP
     ========================================================= */
@@ -530,7 +472,7 @@ function AuthPage({ mode }) {
 
                         <div className="showcase-note">
 
-                            <FaShieldHeart />
+                            <FaShieldAlt />
 
                             <span>
 
@@ -642,7 +584,7 @@ function AuthPage({ mode }) {
 
                         <p className="auth-switch">
 
-                            Want to return home?{" "}
+                            Want to return home{" "}
 
                             <Link to="/">
                                 Go to CareConnect
@@ -753,7 +695,7 @@ function AuthPage({ mode }) {
 
                             <span className="feature-icon">
 
-                                <FaShieldHeart />
+                                <FaShieldAlt />
 
                             </span>
 
@@ -784,7 +726,17 @@ function AuthPage({ mode }) {
                 ================================================= */}
 
                 <section className="auth-card">
-
+                    
+                    <div className="auth-back">
+                        <Link
+                            to="/"
+                            className="back-button"
+                            aria-label="Back to CareConnect"
+                            title="Back to CareConnect"
+                        >
+                            ←
+                        </Link>
+                    </div>
 
                     {/* MOBILE BRAND */}
 
@@ -1050,21 +1002,25 @@ function AuthPage({ mode }) {
                         ================================================= */}
 
                         <label>
+
                             Email address
 
                             <span className="input-wrap">
-                            <FaEnvelope />
 
-                            <input
-                                type="email"
-                                name="email"
-                                placeholder="you@example.com"
-                                value={form.email}
-                                onChange={update}
-                                autoComplete="email"
-                                required
-                            />
+                                <FaEnvelope />
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="you@example.com"
+                                    value={form.email}
+                                    onChange={update}
+                                    autoComplete="email"
+                                    required
+                                />
+
                             </span>
+
                         </label>
 
 
@@ -1128,7 +1084,7 @@ function AuthPage({ mode }) {
                                     placeholder={
                                         isLogin
                                             ? "Enter your password"
-                                            : "Create a strong password"
+                                            : "Create your password"
                                     }
                                     value={
                                         form.password
@@ -1170,106 +1126,6 @@ function AuthPage({ mode }) {
                             </span>
 
                         </label>
-
-
-                        {/* =================================================
-                           PASSWORD REQUIREMENTS
-                        ================================================= */}
-
-                        {!isLogin && (
-
-                            <div className="password-requirements">
-
-
-                                <div className="password-header">
-
-                                    <span>
-                                        Password requirements
-                                    </span>
-
-
-                                    {form.password && (
-
-                                        <strong
-                                            className={`strength strength-${passwordScore}`}
-                                        >
-                                            {passwordStrength}
-                                        </strong>
-
-                                    )}
-
-                                </div>
-
-
-                                <div className="strength-bar">
-
-                                    {[1, 2, 3, 4, 5].map(
-                                        (level) => (
-
-                                            <span
-                                                key={level}
-                                                className={
-                                                    passwordScore >=
-                                                    level
-                                                        ? "strength-segment active"
-                                                        : "strength-segment"
-                                                }
-                                            />
-
-                                        )
-                                    )}
-
-                                </div>
-
-
-                                <div className="requirements-grid">
-
-
-                                    <PasswordRequirement
-                                        valid={
-                                            passwordRules.length
-                                        }
-                                        text="At least 8 characters"
-                                    />
-
-
-                                    <PasswordRequirement
-                                        valid={
-                                            passwordRules.uppercase
-                                        }
-                                        text="One uppercase letter"
-                                    />
-
-
-                                    <PasswordRequirement
-                                        valid={
-                                            passwordRules.lowercase
-                                        }
-                                        text="One lowercase letter"
-                                    />
-
-
-                                    <PasswordRequirement
-                                        valid={
-                                            passwordRules.number
-                                        }
-                                        text="One number"
-                                    />
-
-
-                                    <PasswordRequirement
-                                        valid={
-                                            passwordRules.special
-                                        }
-                                        text="One special character"
-                                    />
-
-
-                                </div>
-
-                            </div>
-
-                        )}
 
 
                         {/* =================================================
@@ -1445,7 +1301,7 @@ function AuthPage({ mode }) {
 
                     <div className="auth-security">
 
-                        <FaShieldHeart />
+                        <FaShieldAlt />
 
                         <span>
 
@@ -1462,40 +1318,6 @@ function AuthPage({ mode }) {
             </div>
 
         </main>
-    );
-}
-
-
-/* =========================================================
-   PASSWORD REQUIREMENT COMPONENT
-========================================================= */
-
-function PasswordRequirement({
-    valid,
-    text,
-}) {
-
-    return (
-
-        <div
-            className={
-                valid
-                    ? "password-requirement valid"
-                    : "password-requirement"
-            }
-        >
-
-            <span>
-
-                {valid
-                    ? <FaCheck />
-                    : "•"}
-
-            </span>
-
-            {text}
-
-        </div>
     );
 }
 

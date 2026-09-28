@@ -6,8 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Notification
+from .models import Notification, SOSEvent
 from .serializers import NotificationSerializer
+from .services import create_sos_notification
+from emergency_contacts.models import EmergencyContact
 
 
 class NotificationListView(generics.ListAPIView):
@@ -145,3 +147,24 @@ class NotificationUnreadCountView(APIView):
                 "unread_count": count
             }
         )
+
+
+class SOSActivateView(APIView):
+    """Persist an elder SOS and notify eligible family members."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != "ELDER":
+            return Response({"detail": "Only elders can activate SOS."}, status=status.HTTP_403_FORBIDDEN)
+        elder = request.user.elder_profile
+        contact = (EmergencyContact.objects.filter(elder=elder, is_active=True, can_receive_sos=True).order_by("priority", "id").first())
+        event = SOSEvent.objects.create(
+            elder=elder,
+            status=SOSEvent.Status.CONTACTING if contact else SOSEvent.Status.ACTIVATED,
+            contact_name=contact.name if contact else "",
+            contact_phone=contact.phone if contact else "",
+            contact_priority=contact.priority if contact else None,
+        )
+        name = f"{elder.user.first_name} {elder.user.last_name}".strip() or elder.user.email
+        create_sos_notification(elder=elder, title="Emergency SOS", message=f"{name} has activated an emergency SOS. Please contact them immediately.")
+        return Response({"id": event.id, "status": event.status, "contact": None if not contact else {"name": contact.name, "phone": contact.phone, "priority": contact.priority}}, status=status.HTTP_201_CREATED)

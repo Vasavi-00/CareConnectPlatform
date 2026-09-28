@@ -4,11 +4,11 @@ import {
   FaPills,
   FaCalendarCheck,
   FaBell,
-  FaShieldHeart,
-  FaTriangleExclamation,
+  FaShieldAlt,
   FaRobot,
-} from "react-icons/fa6";
+} from "react-icons/fa";
 
+import { FaTriangleExclamation } from "react-icons/fa6";
 const reasons = [
 
   {
@@ -33,7 +33,7 @@ const reasons = [
   },
 
   {
-    icon: <FaShieldHeart />,
+    icon: <FaShieldAlt />,
     title: "Secure Care",
     desc:
       "Authentication and controlled access protect user information."

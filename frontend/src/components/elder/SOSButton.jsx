@@ -5,9 +5,11 @@ import React, {
 import {
   FaExclamationTriangle,
 } from "react-icons/fa";
+import SOSConfirmationModal from "./SOSConfirmationModal";
 
 export default function SOSButton({
   language,
+  onActivate,
 }) {
   const timer = useRef(null);
 
@@ -16,6 +18,8 @@ export default function SOSButton({
 
   const [activated, setActivated] =
     useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const startPress = () => {
     const start = Date.now();
@@ -37,9 +41,13 @@ export default function SOSButton({
             timer.current
           );
 
-          setActivated(true);
+          setConfirming(true);
         }
       }, 50);
+  };
+
+  const confirmSOS = async () => {
+    try { setSending(true); await onActivate?.(); setActivated(true); setConfirming(false); } finally { setSending(false); }
   };
 
   const cancelPress = () => {
@@ -53,6 +61,7 @@ export default function SOSButton({
   };
 
   return (
+    <>
     <button
       type="button"
       className={`elder-sos ${
@@ -98,5 +107,7 @@ export default function SOSButton({
         </span>
       )}
     </button>
+    <SOSConfirmationModal isOpen={confirming} onCancel={() => { setConfirming(false); setProgress(0); }} onConfirm={confirmSOS} sending={sending} />
+    </>
   );
 }

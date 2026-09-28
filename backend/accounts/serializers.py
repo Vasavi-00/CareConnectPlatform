@@ -77,6 +77,24 @@ class SignupSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate_phone(self, value):
+        value = value.strip()
+
+        if not value:
+            return value
+
+        if not value.isdigit():
+            raise serializers.ValidationError(
+                "Phone number must contain only digits."
+            )
+
+        if len(value) != 10:
+            raise serializers.ValidationError(
+                "Phone number must contain exactly 10 digits."
+            )
+
+        return value
+
     # --------------------------------------------------------
     # PASSWORD + CONFIRM PASSWORD VALIDATION
     # --------------------------------------------------------
@@ -288,13 +306,15 @@ class FamilyProfileSerializer(serializers.ModelSerializer):
 
     first_name = serializers.CharField(
         source="user.first_name",
-        read_only=True,
+        required=False,
     )
 
     last_name = serializers.CharField(
         source="user.last_name",
-        read_only=True,
+        required=False,
     )
+
+    phone = serializers.CharField(source="user.phone", required=False)
 
     class Meta:
         model = FamilyProfile
@@ -304,6 +324,7 @@ class FamilyProfileSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "phone",
             "profile_photo",
             "alternate_phone",
             "address",
@@ -322,6 +343,18 @@ class FamilyProfileSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop("user", {})
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        if user_data:
+            user = instance.user
+            for field, value in user_data.items():
+                setattr(user, field, value)
+            user.save(update_fields=list(user_data.keys()))
+        return instance
+
 
 # ============================================================
 # FAMILY-ELDER RELATIONSHIP
@@ -339,10 +372,73 @@ class FamilyElderRelationshipSerializer(
 
     elder_email = serializers.SerializerMethodField()
 
+    elder_id = serializers.IntegerField(
+        source="elder.id",
+        read_only=True,
+    )
+
     careconnect_id = serializers.CharField(
         source="elder.careconnect_id",
         read_only=True,
     )
+
+    family_phone = serializers.CharField(
+        source="family.user.phone",
+        read_only=True,
+    )
+
+    elder_phone = serializers.CharField(
+        source="elder.user.phone",
+        read_only=True,
+    )
+    elder_date_of_birth = serializers.DateField(
+        source="elder.date_of_birth",
+        read_only=True,
+    )
+    elder_gender = serializers.CharField(
+        source="elder.gender",
+        read_only=True,
+    )
+    elder_preferred_language = serializers.CharField(
+        source="elder.preferred_language",
+        read_only=True,
+    )
+    elder_address = serializers.CharField(
+        source="elder.address",
+        read_only=True,
+    )
+    elder_city = serializers.CharField(
+        source="elder.city",
+        read_only=True,
+    )
+    elder_state = serializers.CharField(
+        source="elder.state",
+        read_only=True,
+    )
+    elder_pincode = serializers.CharField(
+        source="elder.pincode",
+        read_only=True,
+    )
+    elder_medical_notes = serializers.CharField(
+        source="elder.medical_notes",
+        read_only=True,
+    )
+    elder_emergency_notes = serializers.CharField(
+        source="elder.emergency_notes",
+        read_only=True,
+    )
+
+    # Convenience aliases
+    phone = serializers.CharField(source="elder.user.phone", read_only=True)
+    city = serializers.CharField(source="elder.city", read_only=True)
+    state = serializers.CharField(source="elder.state", read_only=True)
+    address = serializers.CharField(source="elder.address", read_only=True)
+    pincode = serializers.CharField(source="elder.pincode", read_only=True)
+    date_of_birth = serializers.DateField(source="elder.date_of_birth", read_only=True)
+    gender = serializers.CharField(source="elder.gender", read_only=True)
+    preferred_language = serializers.CharField(source="elder.preferred_language", read_only=True)
+    medical_notes = serializers.CharField(source="elder.medical_notes", read_only=True)
+    emergency_notes = serializers.CharField(source="elder.emergency_notes", read_only=True)
 
     class Meta:
         model = FamilyElderRelationship
@@ -353,10 +449,32 @@ class FamilyElderRelationshipSerializer(
             "family",
             "family_name",
             "family_email",
+            "family_phone",
 
             "elder",
+            "elder_id",
             "elder_name",
             "elder_email",
+            "elder_phone",
+            "elder_date_of_birth",
+            "elder_gender",
+            "elder_preferred_language",
+            "elder_address",
+            "elder_city",
+            "elder_state",
+            "elder_pincode",
+            "elder_medical_notes",
+            "elder_emergency_notes",
+            "phone",
+            "city",
+            "state",
+            "address",
+            "pincode",
+            "date_of_birth",
+            "gender",
+            "preferred_language",
+            "medical_notes",
+            "emergency_notes",
             "careconnect_id",
 
             "relationship_type",
@@ -378,6 +496,7 @@ class FamilyElderRelationshipSerializer(
             "elder",
             "created_at",
             "updated_at",
+
         ]
 
     def get_family_name(self, obj):
@@ -481,23 +600,6 @@ class ConnectionRequestCreateSerializer(
             )
 
         return attrs
-    def validate_phone(self, value):
-        value = value.strip()
-
-        if not value:
-            return value
-
-        if not value.isdigit():
-            raise serializers.ValidationError(
-                "Phone number must contain only digits."
-            )
-
-        if len(value) != 10:
-            raise serializers.ValidationError(
-                "Phone number must contain exactly 10 digits."
-            )
-
-        return value
 
     def create(self, validated_data):
 

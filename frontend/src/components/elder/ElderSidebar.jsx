@@ -110,7 +110,7 @@ export default function ElderSidebar({
         </NavLink>
       </nav>
 
-      <div className="elder-sidebar-illustration">
+      <div>
         <img
           src={sidebarCare}
           alt="Care and comfort"

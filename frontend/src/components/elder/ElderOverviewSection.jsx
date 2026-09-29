@@ -328,7 +328,7 @@ export default function ElderOverviewSection({
         <div className="elder-cloud cloud-3" />
 
         <div className="elder-hero-text">
-          <h1>Welcome, {firstName}! ❤️</h1>
+          <h1>Welcome, {firstName}! </h1>
           <p className="elder-hero-subtitle">Here is your care for today.</p>
           <p className="elder-hero-quote">
             “We're here to help you feel safe, healthy and connected.”

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -12,7 +12,6 @@ import {
   FaRobot,
   FaTriangleExclamation,
   FaCheck,
-  FaTrash,
   FaUser,
   FaGear,
   FaCircleQuestion,
@@ -22,7 +21,9 @@ import {
 import logo from "../../assets/images/logo.png";
 
 import {
-  sendConnectionRequest,
+  getNotifications,
+  markNotificationRead,
+  connectElder,
 } from "../../services/api/familyApi";
 
 import "../../styles/family/FamilyHeader.css";
@@ -32,6 +33,7 @@ export default function FamilyHeader({
   sidebarOpen,
   setSidebarOpen,
   user,
+  selectedElder,
   onElderConnected,
 }) {
 
@@ -90,107 +92,46 @@ export default function FamilyHeader({
   const [showNotifications, setShowNotifications] =
     useState(false);
 
-  const [notifications, setNotifications] =
-    useState([
-      {
-        id: 1,
-        type: "medicine",
-        icon: <FaPills />,
-        title: "Medicine Reminder",
-        message:
-          "Your parent's evening medicine is due at 8:00 PM.",
-        time: "10 min ago",
-        unread: true,
-      },
+  const [notifications, setNotifications] = useState([]);
+  const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
 
-      {
-        id: 2,
-        type: "appointment",
-        icon: <FaCalendarCheck />,
-        title: "Upcoming Appointment",
-        message:
-          "General checkup is scheduled for tomorrow at 10:30 AM.",
-        time: "1 hour ago",
-        unread: true,
-      },
-
-      {
-        id: 3,
-        type: "ai",
-        icon: <FaRobot />,
-        title: "AI Companion Update",
-        message:
-          "Your parent had a conversation with the AI Companion.",
-        time: "3 hours ago",
-        unread: true,
-      },
-
-      {
-        id: 4,
-        type: "emergency",
-        icon: <FaTriangleExclamation />,
-        title: "Health Alert",
-        message:
-          "Please review your parent's latest health alert.",
-        time: "Yesterday",
-        unread: false,
-      },
-    ]);
-
-
-  // =====================================================
-  // UNREAD COUNT
-  // =====================================================
-
-  const unreadCount = notifications.filter(
-    (notification) => notification.unread
-  ).length;
-
-
-  // =====================================================
-  // MARK NOTIFICATION AS READ
-  // =====================================================
-
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id
-          ? {
-              ...notification,
-              unread: false,
-            }
-          : notification
-      )
-    );
+  const loadNotifications = async () => {
+    try {
+      const rows = await getNotifications();
+      const visible = elderId ? rows.filter((item) => !item.elder || String(item.elder.id) === String(elderId)) : [];
+      setNotifications(visible.map((item) => {
+        const type = item.notification_type === "MEDICINE" ? "medicine" : item.notification_type === "APPOINTMENT" ? "appointment" : item.notification_type === "AI_SUMMARY" ? "ai" : item.notification_type === "SOS" ? "emergency" : "general";
+        const icon = type === "medicine" ? <FaPills /> : type === "appointment" ? <FaCalendarCheck /> : type === "ai" ? <FaRobot /> : type === "emergency" ? <FaTriangleExclamation /> : <FaCircleInfo />;
+        return { ...item, type, icon, unread: !item.is_read, time: item.created_at ? new Date(item.created_at).toLocaleString() : "" };
+      }));
+    } catch (err) { console.error("Family notification load error:", err); }
   };
 
+  useEffect(() => { loadNotifications(); }, [elderId]);
+  const unreadCount = notifications.filter((notification) => notification.unread).length;
 
-  // =====================================================
-  // MARK ALL AS READ
-  // =====================================================
-
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({
-        ...notification,
-        unread: false,
-      }))
-    );
+  const markAsRead = async (id) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, unread: false, is_read: true } : item));
+    } catch (err) { console.error("Failed to mark notification as read:", err); }
   };
 
-
-  // =====================================================
-  // DELETE NOTIFICATION
-  // =====================================================
-
-  const deleteNotification = (id) => {
-    setNotifications((prev) =>
-      prev.filter(
-        (notification) =>
-          notification.id !== id
-      )
-    );
+  const markAllAsRead = async () => {
+    try {
+      await Promise.all(notifications.filter((item) => item.unread).map((item) => markNotificationRead(item.id)));
+      setNotifications((prev) => prev.map((item) => ({ ...item, unread: false, is_read: true })));
+    } catch (err) { console.error("Failed to mark notifications as read:", err); }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem("careconnect_access");
+    localStorage.removeItem("careconnect_refresh");
+    localStorage.removeItem("careconnect_user");
+    setShowProfileMenu(false);
+    navigate("/login", { replace: true });
+  };
+
 
 
   // =====================================================
@@ -240,35 +181,11 @@ export default function FamilyHeader({
       setConnecting(true);
       setConnectionError("");
 
-      /*
-        Send connection request to backend.
-
-        familyApi.js:
-        sendConnectionRequest(
-          careconnectId,
-          relationshipType
-        )
-      */
-
-      await sendConnectionRequest(
-        trimmedCode
-      );
-
-      /*
-        Request was successfully created.
-      */
+      await connectElder(trimmedCode);
 
       setElderAdded(true);
 
-      /*
-        Refresh connected elders in
-        FamilyDashboard.
-
-        Note:
-        The elder will appear in the dashboard
-        only after the elder accepts the request
-        if the backend uses approval flow.
-      */
+      // Reload the dashboard data now that the relationship exists.
 
       if (onElderConnected) {
         await onElderConnected();
@@ -282,7 +199,7 @@ export default function FamilyHeader({
 
       setConnectionError(
         error.message ||
-          "Unable to send connection request."
+          "Unable to connect this elder."
       );
 
     } finally {
@@ -372,7 +289,10 @@ export default function FamilyHeader({
             NOTIFICATIONS
         ================================================= */}
 
-        <div className="notification-wrapper">
+        <div
+          className="notification-wrapper"
+          onMouseLeave={() => setShowNotifications(false)}
+        >
 
           <button
             type="button"
@@ -513,22 +433,6 @@ export default function FamilyHeader({
                         </div>
 
 
-                        {/* Delete */}
-
-                        <button
-                          type="button"
-                          className="delete-notification"
-                          onClick={(e) => {
-                            e.stopPropagation();
-
-                            deleteNotification(
-                              notification.id
-                            );
-                          }}
-                          aria-label="Delete notification"
-                        >
-                          <FaTrash />
-                        </button>
 
                       </div>
 
@@ -567,169 +471,49 @@ export default function FamilyHeader({
             PROFILE
         ================================================= */}
 
-        <div className="profile-wrapper">
-
+        <div className="family-profile-wrapper" onMouseLeave={() => setShowProfileMenu(false)}>
           <button
             type="button"
-            className="header-profile"
-            onClick={() =>
-              setShowProfileMenu(
-                (prev) => !prev
-              )
-            }
+            className="family-profile-btn"
+            onClick={() => setShowProfileMenu((prev) => !prev)}
+            aria-label="Family profile menu"
+            aria-expanded={showProfileMenu}
           >
-
-            <div className="profile-avatar">
-              {avatarLetter}
+            <div className="family-avatar-circle">{avatarLetter}</div>
+            <div className="family-profile-meta">
+              <strong>Hi, {firstName}</strong>
+              <span>Family Member</span>
             </div>
-
-
-            <div className="profile-info">
-
-              <strong>
-                Hi, {firstName}
-              </strong>
-
-              <span>
-                Family Member
-              </span>
-
-            </div>
-
-
-            <FaChevronDown
-              className={`profile-arrow ${
-                showProfileMenu
-                  ? "profile-arrow-open"
-                  : ""
-              }`}
-            />
-
+            <FaChevronDown className={`family-chevron ${showProfileMenu ? "open" : ""}`} />
           </button>
 
-
-          {/* Profile Dropdown */}
-
           {showProfileMenu && (
-
-            <div className="profile-dropdown">
-
-
-              {/* User */}
-
-              <div className="profile-dropdown-user">
-
-                <div className="profile-dropdown-avatar">
-                  {avatarLetter}
-                </div>
-
+            <div className="family-profile-dropdown">
+              <div className="family-profile-dropdown-header">
+                <div className="family-avatar-circle large">{avatarLetter}</div>
                 <div>
-
-                  <strong>
-                    {fullName}
-                  </strong>
-
-                  <span>
-                    Family Member
-                  </span>
-
+                  <strong>{fullName}</strong>
+                  <span className="family-role-pill">Family Account</span>
+                  {user?.email && <small className="family-email-text">{user.email}</small>}
                 </div>
-
               </div>
 
-
-              <div className="profile-dropdown-divider"></div>
-
-
-              {/* Parent Profile */}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowProfileMenu(false);
-
-                  navigate(
-                    "/dashboard/family/profile"
-                  );
-                }}
-              >
-                <FaUser />
-
-                <span>
-                  Parent Profile
-                </span>
-              </button>
-
-
-              {/* Settings */}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowProfileMenu(false);
-
-                  navigate(
-                    "/dashboard/family/settings"
-                  );
-                }}
-              >
-                <FaGear />
-
-                <span>
-                  Settings
-                </span>
-              </button>
-
-
-              {/* Help */}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowProfileMenu(false);
-
-                  navigate(
-                    "/dashboard/family/help"
-                  );
-                }}
-              >
-                <FaCircleQuestion />
-
-                <span>
-                  Help & Support
-                </span>
-              </button>
-
-
-              <div className="profile-dropdown-divider"></div>
-
-
-              {/* Sign Out */}
-
-              <button
-                type="button"
-                className="profile-signout"
-                onClick={() => {
-                  setShowProfileMenu(false);
-
-                  alert(
-                    "Sign out functionality will be connected to the backend."
-                  );
-                }}
-              >
-
-                <FaArrowRightFromBracket />
-
-                <span>
-                  Sign Out
-                </span>
-
-              </button>
-
+              <div className="family-profile-dropdown-links">
+                <button type="button" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/profile"); }}>
+                  <FaUser /> Parent Profile
+                </button>
+                <button type="button" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/settings"); }}>
+                  <FaGear /> Settings
+                </button>
+                <button type="button" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/help"); }}>
+                  <FaCircleQuestion /> Help & Support
+                </button>
+                <button type="button" className="family-logout-link" onClick={handleLogout}>
+                  <FaArrowRightFromBracket /> Sign Out
+                </button>
+              </div>
             </div>
-
           )}
-
         </div>
 
       </div>
@@ -834,11 +618,9 @@ export default function FamilyHeader({
                   <FaCircleInfo />
 
                   <p>
-                    A connection request will be
-                    sent to the elder. The elder may
-                    need to accept the request before
-                    their information becomes visible
-                    on your dashboard.
+                    The elder will be connected to
+                    your family dashboard immediately
+                    after their CareConnect ID is verified.
                   </p>
 
                 </div>
@@ -878,7 +660,7 @@ export default function FamilyHeader({
                     <FaPlus />
 
                     {connecting
-                      ? "Sending..."
+                      ? "Connecting..."
                       : "Connect Elder"}
 
                   </button>
@@ -904,10 +686,9 @@ export default function FamilyHeader({
                 </h3>
 
                 <p>
-                  Your request has been sent
-                  successfully. The elder needs to
-                  accept the request before the
-                  connection becomes active.
+                  Elder connected successfully.
+                  Their profile is now available
+                  on your family dashboard.
                 </p>
 
                 <button

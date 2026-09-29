@@ -135,7 +135,7 @@ export default function ElderHeader({
       ================================================= */}
       <div className="elder-header-right">
         {/* Notifications Dropdown */}
-        <div className="elder-notification-wrapper">
+        <div className="elder-notification-wrapper" onMouseLeave={() => setShowNotifications(false)}>
           <button
             type="button"
             className="elder-notification-btn"
@@ -241,7 +241,7 @@ export default function ElderHeader({
         </div>
 
         {/* Profile Dropdown */}
-        <div className="elder-profile-wrapper">
+        <div className="elder-profile-wrapper" onMouseLeave={() => setShowProfileMenu(false)}>
           <button
             type="button"
             className="elder-profile-btn"

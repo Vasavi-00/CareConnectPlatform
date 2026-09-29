@@ -19,7 +19,9 @@ import "../../styles/family/HelpPage.css";
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
-  const [messageSent, setMessageSent] = useState(false);
+  const [supportError, setSupportError] = useState("");
+  const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || "";
+  const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || "";
 
   const [form, setForm] = useState({
     name: "",
@@ -81,23 +83,18 @@ export default function HelpPage() {
       [name]: value,
     }));
 
-    setMessageSent(false);
+    setSupportError("");
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    setMessageSent(true);
-
-    setForm({
-      name: "",
-      email: "",
-      message: "",
-    });
-
-    setTimeout(() => {
-      setMessageSent(false);
-    }, 4000);
+    if (!supportEmail) {
+      setSupportError("Support email is not configured. Please contact your CareConnect administrator.");
+      return;
+    }
+    const subject = encodeURIComponent("CareConnect support request");
+    const body = encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`);
+    window.location.href = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -349,7 +346,7 @@ export default function HelpPage() {
 
               <div>
                 <span>Phone Support</span>
-                <strong>+91 1800 123 4567</strong>
+                <strong>{supportPhone || "Phone support is not configured"}</strong>
               </div>
 
             </div>
@@ -363,7 +360,7 @@ export default function HelpPage() {
 
               <div>
                 <span>Email Support</span>
-                <strong>support@careconnect.com</strong>
+                <strong>{supportEmail || "Support email is not configured"}</strong>
               </div>
 
             </div>
@@ -377,7 +374,7 @@ export default function HelpPage() {
 
               <div>
                 <span>Support Hours</span>
-                <strong>Monday – Saturday, 9 AM – 6 PM</strong>
+                <strong>Use the configured support contact</strong>
               </div>
 
             </div>
@@ -385,10 +382,10 @@ export default function HelpPage() {
           </div>
 
 
-          <button className="contact-support-button">
+          <a className="contact-support-button" href={supportPhone ? `tel:${supportPhone}` : supportEmail ? `mailto:${supportEmail}` : undefined}>
             <FaPhone />
             Contact Support
-          </button>
+          </a>
 
         </div>
 
@@ -469,11 +466,8 @@ export default function HelpPage() {
             </div>
 
 
-            {messageSent && (
-              <div className="message-success">
-                ✓ Your message has been sent successfully.
-              </div>
-            )}
+            {supportError && <div className="message-error" role="alert">{supportError}</div>}
+            <p className="support-delivery-note">This opens your configured email app with your message ready to send.</p>
 
 
             <button

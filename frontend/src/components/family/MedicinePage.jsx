@@ -19,70 +19,42 @@ import {
   FaXmark,
 } from "react-icons/fa6";
 
+import { createMedicine, deleteMedicine as removeMedicine, getMedicines, updateMedicine } from "../../services/api/familyApi";
 import "../../styles/family/MedicinePage.css";
 
-export default function MedicinePage() {
+export default function MedicinePage({ selectedElder }) {
+  const canManageMedicines = selectedElder?.can_manage_medicines !== false;
   const [showAddMedicine, setShowAddMedicine] = useState(false);
+  const [editingMedicine, setEditingMedicine] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [stockFilter, setStockFilter] = useState("All");
 
-  const [medicines, setMedicines] = useState([
-    {
-      id: 1,
-      name: "Amlodipine",
-      dosage: "5 mg",
-      schedule: "1 tablet daily (8:00 AM)",
-      stock: 45,
-      unit: "tablets",
-      status: "Good",
-    },
-    {
-      id: 2,
-      name: "Metformin",
-      dosage: "500 mg",
-      schedule: "1 tablet twice daily",
-      stock: 8,
-      unit: "tablets",
-      status: "Low Stock",
-    },
-    {
-      id: 3,
-      name: "Vitamin D3",
-      dosage: "1000 IU",
-      schedule: "1 capsule daily (1:00 PM)",
-      stock: 5,
-      unit: "capsules",
-      status: "Low Stock",
-    },
-    {
-      id: 4,
-      name: "Calcium",
-      dosage: "600 mg",
-      schedule: "1 tablet daily (1:30 PM)",
-      stock: 28,
-      unit: "tablets",
-      status: "Good",
-    },
-    {
-      id: 5,
-      name: "Atorvastatin",
-      dosage: "10 mg",
-      schedule: "1 tablet daily (8:00 PM)",
-      stock: 20,
-      unit: "tablets",
-      status: "Good",
-    },
-    {
-      id: 6,
-      name: "Omeprazole",
-      dosage: "20 mg",
-      schedule: "1 capsule daily (9:00 PM)",
-      stock: 12,
-      unit: "capsules",
-      status: "Low Stock",
-    },
-  ]);
+  const [medicines, setMedicines] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
+    if (!elderId) {
+      setMedicines([]);
+      return undefined;
+    }
+    setLoading(true);
+    setError("");
+    getMedicines(elderId)
+      .then((rows) => { if (active) setMedicines(rows.map((item) => ({
+        ...item,
+        stock: Number(item.quantity || 0),
+        unit: "units",
+        schedule: [item.frequency, item.timing].filter(Boolean).join(" · ") || "As prescribed",
+        status: Number(item.quantity || 0) <= Number(item.low_stock_threshold || 5) ? "Low Stock" : "Good",
+      }))); })
+      .catch((err) => { if (active) setError(err.message || "Unable to load medicines."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [selectedElder]);
 
   const [newMedicine, setNewMedicine] = useState({
     name: "",
@@ -92,52 +64,26 @@ export default function MedicinePage() {
     unit: "tablets",
   });
 
-  const todayMedicines = {
-    morning: [
-      {
-        name: "Amlodipine 5mg",
-        dose: "1 tablet",
-        time: "8:00 AM",
-        taken: true,
-      },
-      {
-        name: "Metformin 500mg",
-        dose: "1 tablet",
-        time: "8:30 AM",
-        taken: true,
-      },
-    ],
-
-    afternoon: [
-      {
-        name: "Vitamin D3",
-        dose: "1 capsule",
-        time: "1:00 PM",
-        taken: false,
-      },
-      {
-        name: "Calcium 600mg",
-        dose: "1 tablet",
-        time: "1:30 PM",
-        taken: false,
-      },
-    ],
-
-    night: [
-      {
-        name: "Atorvastatin 10mg",
-        dose: "1 tablet",
-        time: "8:00 PM",
-        taken: false,
-      },
-      {
-        name: "Omeprazole 20mg",
-        dose: "1 capsule",
-        time: "9:00 PM",
-        taken: false,
-      },
-    ],
-  };
+  const today = new Date().toISOString().slice(0, 10);
+  const todayMedicines = medicines.filter((medicine) =>
+    medicine.is_active !== false
+    && (!medicine.start_date || medicine.start_date <= today)
+    && (!medicine.end_date || medicine.end_date >= today)
+  );
+  const dosesFor = (period) => todayMedicines.filter((medicine) => {
+    const schedule = [medicine.timing, ...(Array.isArray(medicine.times) ? medicine.times : [])]
+      .filter(Boolean).join(" ").toLowerCase();
+    if (/morning/.test(schedule)) return period === "morning";
+    if (/afternoon|noon/.test(schedule)) return period === "afternoon";
+    if (/evening|night/.test(schedule)) return period === "night";
+    const time = schedule.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/);
+    if (!time) return false;
+    let hour = Number(time[1]);
+    if (time[3] === "pm" && hour < 12) hour += 12;
+    if (time[3] === "am" && hour === 12) hour = 0;
+    const bucket = hour >= 5 && hour < 12 ? "morning" : hour >= 12 && hour < 17 ? "afternoon" : "night";
+    return bucket === period;
+  });
 
   const filteredMedicines = medicines.filter((medicine) => {
   const matchesSearch = medicine.name
@@ -160,42 +106,46 @@ export default function MedicinePage() {
     }));
   };
 
-  const handleAddMedicine = (e) => {
+  const handleAddMedicine = async (e) => {
     e.preventDefault();
-
-    if (!newMedicine.name || !newMedicine.dosage) {
-      return;
-    }
-
-    const stockValue = Number(newMedicine.stock) || 0;
-
-    const medicine = {
-      id: Date.now(),
-      name: newMedicine.name,
-      dosage: newMedicine.dosage,
-      schedule: newMedicine.schedule || "As prescribed",
-      stock: stockValue,
-      unit: newMedicine.unit,
-      status: stockValue <= 10 ? "Low Stock" : "Good",
-    };
-
-    setMedicines((prev) => [...prev, medicine]);
-
-    setNewMedicine({
-      name: "",
-      dosage: "",
-      schedule: "",
-      stock: "",
-      unit: "tablets",
-    });
-
-    setShowAddMedicine(false);
+    const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
+    if (!elderId || !newMedicine.name || !newMedicine.dosage) return;
+    try {
+      setError("");
+      const payload = {
+        elder_id: elderId,
+        name: newMedicine.name,
+        dosage: newMedicine.dosage,
+        frequency: newMedicine.schedule || "Once daily",
+        timing: "",
+        quantity: Number(newMedicine.stock) || 0,
+        low_stock_threshold: 5,
+        is_active: true,
+      };
+      const created = editingMedicine
+        ? await updateMedicine(editingMedicine, payload)
+        : await createMedicine(payload);
+      const updatedMedicine = {
+        ...created,
+        stock: Number(created.quantity || 0),
+        unit: "units",
+        schedule: [created.frequency, created.timing].filter(Boolean).join(" · ") || "As prescribed",
+        status: Number(created.quantity || 0) <= Number(created.low_stock_threshold || 5) ? "Low Stock" : "Good",
+      };
+      setMedicines((prev) => editingMedicine
+        ? prev.map((item) => item.id === editingMedicine ? updatedMedicine : item)
+        : [...prev, updatedMedicine]);
+      setNewMedicine({ name: "", dosage: "", schedule: "", stock: "", unit: "tablets" });
+      setEditingMedicine(null);
+      setShowAddMedicine(false);
+    } catch (err) { setError(err.message || "Unable to add medicine."); }
   };
 
-  const deleteMedicine = (id) => {
-    setMedicines((prev) =>
-      prev.filter((medicine) => medicine.id !== id)
-    );
+  const deleteMedicine = async (id) => {
+    try {
+      await removeMedicine(id);
+      setMedicines((prev) => prev.filter((medicine) => medicine.id !== id));
+    } catch (err) { setError(err.message || "Unable to delete medicine."); }
   };
 
   useEffect(() => {
@@ -274,7 +224,7 @@ export default function MedicinePage() {
           <div>
             <span>Total Medicines</span>
             <strong>{medicines.length}</strong>
-            <small>active medicines</small>
+            <small>{todayMedicines.length} active today</small>
           </div>
 
         </div>
@@ -288,8 +238,8 @@ export default function MedicinePage() {
 
           <div>
             <span>Medicines Today</span>
-            <strong>6</strong>
-            <small>to be taken</small>
+            <strong>{todayMedicines.length}</strong>
+            <small>{todayMedicines.length} active today</small>
           </div>
 
         </div>
@@ -304,9 +254,7 @@ export default function MedicinePage() {
           <div>
             <span>Low Stock</span>
             <strong>
-              {medicines.filter(
-                (medicine) => medicine.stock <= 10
-              ).length}
+              {medicines.filter((medicine) => medicine.status === "Low Stock").length}
             </strong>
             <small>need refill soon</small>
           </div>
@@ -322,8 +270,8 @@ export default function MedicinePage() {
 
           <div>
             <span>Missed Doses</span>
-            <strong>1</strong>
-            <small>this week</small>
+            <strong>—</strong>
+            <small>dose tracking unavailable</small>
           </div>
 
         </div>
@@ -351,12 +299,12 @@ export default function MedicinePage() {
               </h2>
 
               <p>
-                Tuesday, 16 September 2026
+                {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </p>
             </div>
 
-            <button className="view-schedule-btn">
-              View Schedule →
+            <button type="button" className="view-schedule-btn" onClick={() => document.querySelector("#stock")?.scrollIntoView({ behavior: "smooth" })}>
+              View Inventory →
             </button>
 
           </div>
@@ -368,30 +316,26 @@ export default function MedicinePage() {
 
             <div className="time-label">
               <FaSun />
-              <strong>Morning (2)</strong>
+              <strong>Morning ({dosesFor("morning").length})</strong>
             </div>
 
             <div className="dose-list">
 
-              {todayMedicines.morning.map((medicine) => (
+              {dosesFor("morning").map((medicine) => (
                 <div
                   className="dose-row"
-                  key={medicine.name}
+                  key={medicine.id}
                 >
 
-                  <span className="dose-status taken">
-                    <FaCheck />
-                  </span>
+                  <span className="dose-status pending"><FaCircle /></span>
 
                   <strong>{medicine.name}</strong>
 
                   <span className="dose-time">
-                    {medicine.dose} • {medicine.time}
+                    {medicine.dosage} • {medicine.timing || medicine.frequency || "Time not set"}
                   </span>
 
-                  <span className="dose-badge taken-badge">
-                    Taken
-                  </span>
+                  <span className="dose-badge pending-badge">Scheduled</span>
 
                 </div>
               ))}
@@ -407,15 +351,15 @@ export default function MedicinePage() {
 
             <div className="time-label">
               <FaCloudSun />
-              <strong>Afternoon (2)</strong>
+              <strong>Afternoon ({dosesFor("afternoon").length})</strong>
             </div>
 
             <div className="dose-list">
 
-              {todayMedicines.afternoon.map((medicine) => (
+              {dosesFor("afternoon").map((medicine) => (
                 <div
                   className="dose-row"
-                  key={medicine.name}
+                  key={medicine.id}
                 >
 
                   <span className="dose-status pending">
@@ -425,11 +369,11 @@ export default function MedicinePage() {
                   <strong>{medicine.name}</strong>
 
                   <span className="dose-time">
-                    {medicine.dose} • {medicine.time}
+                    {medicine.dosage} • {medicine.timing || medicine.frequency || "Time not set"}
                   </span>
 
                   <span className="dose-badge pending-badge">
-                    Pending
+                    Scheduled
                   </span>
 
                 </div>
@@ -446,15 +390,15 @@ export default function MedicinePage() {
 
             <div className="time-label">
               <FaMoon />
-              <strong>Night (2)</strong>
+              <strong>Evening / night ({dosesFor("night").length})</strong>
             </div>
 
             <div className="dose-list">
 
-              {todayMedicines.night.map((medicine) => (
+              {dosesFor("night").map((medicine) => (
                 <div
                   className="dose-row"
-                  key={medicine.name}
+                  key={medicine.id}
                 >
 
                   <span className="dose-status pending">
@@ -464,11 +408,11 @@ export default function MedicinePage() {
                   <strong>{medicine.name}</strong>
 
                   <span className="dose-time">
-                    {medicine.dose} • {medicine.time}
+                    {medicine.dosage} • {medicine.timing || medicine.frequency || "Time not set"}
                   </span>
 
                   <span className="dose-badge pending-badge">
-                    Pending
+                    Scheduled
                   </span>
 
                 </div>
@@ -497,27 +441,28 @@ export default function MedicinePage() {
 
             <div className="medicine-action-grid">
 
-              <button
-                onClick={() => setShowAddMedicine(true)}
+              {canManageMedicines && <button
+                type="button"
+                onClick={() => { setEditingMedicine(null); setNewMedicine({ name: "", dosage: "", schedule: "", stock: "", unit: "tablets" }); setShowAddMedicine(true); }}
                 className="action-item add-action"
               >
                 <FaPlus />
                 <span>Add Medicine</span>
-              </button>
+              </button>}
 
-              <button className="action-item reminder-action">
+              <button type="button" className="action-item reminder-action" onClick={() => document.querySelector("#today")?.scrollIntoView({ behavior: "smooth" })}>
                 <FaBell />
-                <span>Set Reminder</span>
+                <span>View Schedule</span>
               </button>
 
-              <button className="action-item refill-action">
+              <button type="button" className="action-item refill-action" onClick={() => { setStockFilter("Low Stock"); document.querySelector("#stock")?.scrollIntoView({ behavior: "smooth" }); }}>
                 <FaRotate />
-                <span>Request Refill</span>
+                <span>Review Refills</span>
               </button>
 
-              <button className="action-item report-action">
+              <button type="button" className="action-item report-action" onClick={() => document.querySelector("#stock")?.scrollIntoView({ behavior: "smooth" })}>
                 <FaChartSimple />
-                <span>View Reports</span>
+                <span>View Stock</span>
               </button>
 
             </div>
@@ -536,47 +481,19 @@ export default function MedicinePage() {
                 Refill Reminders
               </h2>
 
-              <button>
-                View All →
+              <button type="button" onClick={() => { setStockFilter("Low Stock"); document.querySelector("#stock")?.scrollIntoView({ behavior: "smooth" }); }}>
+                View Low Stock →
               </button>
 
             </div>
 
 
-            <div className="refill-item">
-
-              <div className="refill-icon">
-                <FaPills />
+            {medicines.filter((medicine) => medicine.status === "Low Stock").length ? medicines.filter((medicine) => medicine.status === "Low Stock").map((medicine) => (
+              <div className="refill-item" key={medicine.id}>
+                <div className="refill-icon"><FaPills /></div>
+                <div className="refill-info"><strong>{medicine.name}</strong><span>Low stock · {medicine.stock} units left</span></div>
               </div>
-
-              <div className="refill-info">
-                <strong>Metformin 500mg</strong>
-                <span>Low stock · 8 tablets left</span>
-              </div>
-
-              <button className="refill-now">
-                Refill Now
-              </button>
-
-            </div>
-
-
-            <div className="refill-item">
-
-              <div className="refill-icon">
-                <FaPills />
-              </div>
-
-              <div className="refill-info">
-                <strong>Vitamin D3</strong>
-                <span>Low stock · 5 capsules left</span>
-              </div>
-
-              <button className="refill-now">
-                Refill Now
-              </button>
-
-            </div>
+            )) : <p>No medicines currently need a refill.</p>}
 
           </div>
 
@@ -652,6 +569,9 @@ export default function MedicinePage() {
 
             <tbody>
 
+              {loading && <tr><td colSpan="6">Loading medicines…</td></tr>}
+              {error && <tr><td colSpan="6" role="alert">{error}</td></tr>}
+              {!loading && !error && !filteredMedicines.length && <tr><td colSpan="6">No medicines found for this elder.</td></tr>}
               {filteredMedicines.map((medicine) => (
 
                 <tr key={medicine.id}>
@@ -697,18 +617,12 @@ export default function MedicinePage() {
 
                     <div className="table-actions">
 
-                      <button title="Edit">
-                        <FaPenToSquare />
-                      </button>
-
-                      <button
-                        title="Delete"
-                        onClick={() =>
-                          deleteMedicine(medicine.id)
-                        }
-                      >
-                        <FaTrash />
-                      </button>
+                      {canManageMedicines && <>
+                        <button title="Edit" type="button" onClick={() => { setEditingMedicine(medicine.id); setNewMedicine({ name: medicine.name, dosage: medicine.dosage, schedule: medicine.frequency || medicine.schedule, stock: medicine.stock, unit: "tablets" }); setShowAddMedicine(true); }}>
+                          <FaPenToSquare />
+                        </button>
+                        <button title="Delete" type="button" onClick={() => deleteMedicine(medicine.id)}><FaTrash /></button>
+                      </>}
 
                     </div>
 
@@ -731,7 +645,7 @@ export default function MedicinePage() {
           ADD MEDICINE MODAL
       ===================================== */}
 
-      {showAddMedicine && (
+      {canManageMedicines && showAddMedicine && (
 
         <div
           className="medicine-modal-overlay"
@@ -748,7 +662,7 @@ export default function MedicinePage() {
               <div>
                 <h2>
                   <FaPills />
-                  Add Medicine
+                  {editingMedicine ? "Edit Medicine" : "Add Medicine"}
                 </h2>
 
                 <p>
@@ -843,32 +757,7 @@ export default function MedicinePage() {
                 </div>
 
 
-                <div className="form-group">
 
-                  <label>
-                    Unit
-                  </label>
-
-                  <select
-                    name="unit"
-                    value={newMedicine.unit}
-                    onChange={handleInputChange}
-                  >
-                    <option value="tablets">
-                      Tablets
-                    </option>
-
-                    <option value="capsules">
-                      Capsules
-                    </option>
-
-                    <option value="bottles">
-                      Bottles
-                    </option>
-
-                  </select>
-
-                </div>
 
               </div>
 
@@ -890,7 +779,7 @@ export default function MedicinePage() {
                   className="save-medicine-btn"
                 >
                   <FaPlus />
-                  Add Medicine
+                  {editingMedicine ? "Save Medicine" : "Add Medicine"}
                 </button>
 
               </div>

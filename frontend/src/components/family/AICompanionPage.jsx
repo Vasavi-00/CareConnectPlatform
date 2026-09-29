@@ -1,570 +1,98 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FaRobot,
-  FaFaceSmile,
   FaComments,
-  FaTriangleExclamation,
   FaClock,
-  FaArrowRight,
   FaHeart,
-  FaCalendarDay,
-  FaPhone,
-  FaMessage,
   FaMagnifyingGlass,
 } from "react-icons/fa6";
-
+import { getAIConversations } from "../../services/api/familyApi";
 import "../../styles/family/AICompanionPage.css";
 
-export default function AICompanionPage() {
+export default function AICompanionPage({ selectedElder }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const conversations = [
-    {
-      id: 1,
-      date: "Today",
-      time: "10:30 AM",
-      title: "Morning Conversation",
-      message:
-        "Had a lovely conversation about her garden and plans for the weekend.",
-      mood: "Happy",
-      moodClass: "happy",
-    },
-    {
-      id: 2,
-      date: "Yesterday",
-      time: "7:45 PM",
-      title: "Evening Conversation",
-      message:
-        "Talked about her family and mentioned that she enjoyed her evening walk.",
-      mood: "Positive",
-      moodClass: "positive",
-    },
-    {
-      id: 3,
-      date: "14 Sep",
-      time: "11:20 AM",
-      title: "Family Conversation",
-      message:
-        "Mentioned that she was looking forward to her daughter's Sunday call.",
-      mood: "Calm",
-      moodClass: "calm",
-    },
-    {
-      id: 4,
-      date: "13 Sep",
-      time: "4:15 PM",
-      title: "Afternoon Conversation",
-      message:
-        "Talked about her favorite recipes and memories from her childhood.",
-      mood: "Happy",
-      moodClass: "happy",
-    },
-  ];
+  useEffect(() => {
+    let active = true;
+    const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
+    if (!elderId) {
+      setConversations([]);
+      setLoading(false);
+      return () => { active = false; };
+    }
+    setLoading(true);
+    setError("");
+    getAIConversations(elderId)
+      .then((rows) => { if (active) setConversations(rows); })
+      .catch((err) => { if (active) setError(err.message || "Unable to load conversations."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [selectedElder]);
 
-  const filteredConversations = conversations.filter((conversation) => {
-    const search = searchTerm.toLowerCase();
+  const visibleConversations = useMemo(() => conversations.map((conversation) => {
+    const messages = (conversation.messages || []).filter((message) => !message.is_private);
+    const lastMessage = messages[messages.length - 1];
+    const date = conversation.updated_at ? new Date(conversation.updated_at) : null;
+    return {
+      ...conversation,
+      dateLabel: date ? date.toLocaleDateString() : "",
+      timeLabel: date ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "",
+      messageCount: messages.length,
+      preview: lastMessage?.content || "No shared messages in this conversation.",
+    };
+  }), [conversations]);
 
-    return (
-      conversation.title.toLowerCase().includes(search) ||
-      conversation.message.toLowerCase().includes(search) ||
-      conversation.mood.toLowerCase().includes(search)
-    );
-  });
+  const filteredConversations = visibleConversations.filter((conversation) =>
+    `${conversation.title || ""} ${conversation.preview}`.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const latest = visibleConversations[0];
 
   return (
     <div className="ai-companion-page">
-
-      {/* =====================================================
-          PAGE HEADING BANNER
-      ===================================================== */}
-
       <section className="ai-hero">
-
         <div className="ai-hero-left">
-
-          <div className="ai-hero-icon">
-            <FaRobot />
-          </div>
-
+          <div className="ai-hero-icon"><FaRobot /></div>
           <div>
             <h1>AI Companion</h1>
-
-            <p>
-              View your parent's AI conversations, mood and important insights.
-            </p>
+            <p>Review shared conversation history for {selectedElder?.elder_name || "your connected elder"}.</p>
           </div>
-
         </div>
-
-        <div className="ai-hero-right">
-
-          <span>
-            “A friendly conversation
-          </span>
-
-          <span>
-            can brighten every day.”
-          </span>
-
-        </div>
-
+        <div className="ai-hero-right"><span>Conversation history</span><span>Shared messages only</span></div>
       </section>
-
-
-      {/* =====================================================
-          SUMMARY CARDS
-      ===================================================== */}
 
       <section className="ai-summary-grid">
-
-        {/* Current Mood */}
-
-        <div className="ai-summary-card green-ai-card">
-
-          <div className="ai-summary-icon">
-            <FaFaceSmile />
-          </div>
-
-          <div>
-            <span>Current Mood</span>
-
-            <strong>Positive</strong>
-
-            <small>Feeling good today</small>
-          </div>
-
-        </div>
-
-
-        {/* Conversations */}
-
-        <div className="ai-summary-card blue-ai-card">
-
-          <div className="ai-summary-icon">
-            <FaComments />
-          </div>
-
-          <div>
-            <span>Conversations</span>
-
-            <strong>12</strong>
-
-            <small>this week</small>
-          </div>
-
-        </div>
-
-
-        {/* Important Concerns */}
-
-        <div className="ai-summary-card orange-ai-card">
-
-          <div className="ai-summary-icon">
-            <FaTriangleExclamation />
-          </div>
-
-          <div>
-            <span>Important Concerns</span>
-
-            <strong>2</strong>
-
-            <small>need attention</small>
-          </div>
-
-        </div>
-
-
-        {/* Last Conversation */}
-
-        <div className="ai-summary-card purple-ai-card">
-
-          <div className="ai-summary-icon">
-            <FaClock />
-          </div>
-
-          <div>
-            <span>Last Conversation</span>
-
-            <strong>Today</strong>
-
-            <small>10:30 AM</small>
-          </div>
-
-        </div>
-
+        <div className="ai-summary-card blue-ai-card"><div className="ai-summary-icon"><FaComments /></div><div><span>Conversations</span><strong>{loading ? "…" : conversations.length}</strong><small>available to family</small></div></div>
+        <div className="ai-summary-card green-ai-card"><div className="ai-summary-icon"><FaComments /></div><div><span>Shared messages</span><strong>{loading ? "…" : visibleConversations.reduce((total, item) => total + item.messageCount, 0)}</strong><small>private messages hidden</small></div></div>
+        <div className="ai-summary-card purple-ai-card"><div className="ai-summary-icon"><FaClock /></div><div><span>Latest activity</span><strong>{latest?.dateLabel || (loading ? "…" : "—")}</strong><small>{latest?.timeLabel || "No conversation yet"}</small></div></div>
       </section>
-
-
-      {/* =====================================================
-          SUMMARY + INSIGHTS
-      ===================================================== */}
-
-      <section className="ai-main-grid">
-
-        {/* CONVERSATION SUMMARY */}
-
-        <div className="conversation-summary-card">
-
-          <div className="ai-section-header">
-
-            <div>
-              <h2>
-                <FaComments />
-                Conversation Summary
-              </h2>
-
-              <p>
-                A quick overview of recent conversations.
-              </p>
-            </div>
-
-          </div>
-
-
-          {/* Today's Highlight */}
-
-          <div className="conversation-highlight">
-
-            <div className="highlight-icon">
-              <FaHeart />
-            </div>
-
-            <div>
-
-              <span className="highlight-label">
-                TODAY'S HIGHLIGHT
-              </span>
-
-              <h3>
-                Your parent had a positive conversation.
-              </h3>
-
-              <p>
-                The AI Companion noticed a cheerful mood while
-                talking about gardening and weekend plans.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* Conversation Details */}
-
-          <div className="conversation-details">
-
-            <div className="conversation-detail-item">
-
-              <div className="detail-icon">
-                <FaFaceSmile />
-              </div>
-
-              <div>
-                <span>Mood</span>
-
-                <strong>
-                  Happy & Positive
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div className="conversation-detail-item">
-
-              <div className="detail-icon">
-                <FaComments />
-              </div>
-
-              <div>
-                <span>Main Topic</span>
-
-                <strong>
-                  Garden & Weekend Plans
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div className="conversation-detail-item">
-
-              <div className="detail-icon">
-                <FaCalendarDay />
-              </div>
-
-              <div>
-                <span>Family Mention</span>
-
-                <strong>
-                  Sunday Call
-                </strong>
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* AI INSIGHTS */}
-
-        <div className="ai-insights-card">
-
-          <div className="ai-section-header">
-
-            <div>
-              <h2>
-                <FaRobot />
-                AI Companion Insights
-              </h2>
-
-              <p>
-                Important observations from recent conversations.
-              </p>
-            </div>
-
-          </div>
-
-
-          {/* Positive Mood */}
-
-          <div className="insight-item green-insight">
-
-            <div className="insight-icon">
-              <FaFaceSmile />
-            </div>
-
-            <div>
-
-              <strong>
-                Positive Mood
-              </strong>
-
-              <p>
-                Your parent has been in a positive mood
-                during recent conversations.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* Family Connection */}
-
-          <div className="insight-item blue-insight">
-
-            <div className="insight-icon">
-              <FaPhone />
-            </div>
-
-            <div>
-
-              <strong>
-                Family Connection
-              </strong>
-
-              <p>
-                Family conversations appear to be an
-                important source of happiness.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* Attention */}
-
-          <div className="insight-item orange-insight">
-
-            <div className="insight-icon">
-              <FaTriangleExclamation />
-            </div>
-
-            <div>
-
-              <strong>
-                Needs Attention
-              </strong>
-
-              <p>
-                Two conversation topics may need
-                family attention.
-              </p>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* =====================================================
-          CONVERSATION HISTORY
-      ===================================================== */}
 
       <section className="recent-conversations-card">
-
         <div className="ai-section-header">
-
-          <div>
-
-            <h2>
-              <FaMessage />
-              Conversation History
-            </h2>
-
-            <p>
-              Review recent conversations between your parent
-              and the AI Companion.
-            </p>
-
-          </div>
-
-
-          {/* Search */}
-
-          <div className="conversation-search">
-
-            <FaMagnifyingGlass />
-
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchTerm}
-              onChange={(e) =>
-                setSearchTerm(e.target.value)
-              }
-            />
-
-          </div>
-
+          <div><h2><FaComments /> Conversation History</h2><p>Messages marked private by the elder are not shown.</p></div>
+          <div className="conversation-search"><FaMagnifyingGlass /><input type="search" placeholder="Search conversations..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></div>
         </div>
-
-
-        {/* Conversation List */}
-
-        <div className="conversation-list">
-
-          {filteredConversations.length > 0 ? (
-
-            filteredConversations.map((conversation) => (
-
-              <div
-                className="conversation-item"
-                key={conversation.id}
-              >
-
-                {/* Date */}
-
-                <div className="conversation-date">
-
-                  <strong>
-                    {conversation.date}
-                  </strong>
-
-                  <span>
-                    {conversation.time}
-                  </span>
-
-                </div>
-
-
-                {/* AI Icon */}
-
-                <div className="conversation-avatar">
-                  <FaRobot />
-                </div>
-
-
-                {/* Conversation */}
-
-                <div className="conversation-content">
-
-                  <div className="conversation-title-row">
-
-                    <h3>
-                      {conversation.title}
-                    </h3>
-
-                    <span
-                      className={`conversation-mood ${conversation.moodClass}`}
-                    >
-                      <FaFaceSmile />
-
-                      {conversation.mood}
-                    </span>
-
-                  </div>
-
-                  <p>
-                    {conversation.message}
-                  </p>
-
-                </div>
-
-
-                {/* Arrow */}
-
-                <button
-                  className="conversation-arrow"
-                  title="View conversation"
-                >
-                  <FaArrowRight />
-                </button>
-
-              </div>
-
-            ))
-
-          ) : (
-
-            <div className="no-conversations">
-              No conversations found.
-            </div>
-
-          )}
-
-        </div>
-
+        {error && <p role="alert" className="no-conversations">{error}</p>}
+        {loading ? <p className="no-conversations">Loading conversation history…</p> : !error && filteredConversations.length ? (
+          <div className="conversation-list">
+            {filteredConversations.map((conversation) => (
+              <article className="conversation-item" key={conversation.id}>
+                <div className="conversation-date"><strong>{conversation.dateLabel}</strong><span>{conversation.timeLabel}</span></div>
+                <div className="conversation-avatar"><FaRobot /></div>
+                <div className="conversation-content"><div className="conversation-title-row"><h3>{conversation.title || "Companion conversation"}</h3><span className="conversation-mood">{conversation.messageCount} shared messages</span></div><p>{conversation.preview}</p></div>
+              </article>
+            ))}
+          </div>
+        ) : !error ? <p className="no-conversations">{selectedElder ? "No conversation history is available yet." : "Connect an elder to view conversation history."}</p> : null}
       </section>
-
-
-      {/* =====================================================
-          FAMILY CONNECTION
-      ===================================================== */}
 
       <section className="family-concern-card">
-
-        <div className="concern-icon">
-          <FaHeart />
-        </div>
-
-        <div className="concern-content">
-
-          <span className="concern-label">
-            FAMILY CONNECTION
-          </span>
-
-          <h2>
-            Stay connected with your parent
-          </h2>
-
-          <p>
-            Review your parent's conversations and AI-generated
-            insights to understand their mood, interests and
-            important concerns.
-          </p>
-
-        </div>
-
+        <div className="concern-icon"><FaHeart /></div>
+        <div className="concern-content"><span className="concern-label">Privacy</span><h2>Respecting your parent’s privacy</h2><p>The companion service currently provides conversation history. It does not provide mood analysis or family insight summaries.</p></div>
       </section>
-
     </div>
   );
 }
+

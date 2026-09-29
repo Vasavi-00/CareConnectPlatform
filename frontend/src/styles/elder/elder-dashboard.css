@@ -628,15 +628,9 @@
   100% { transform: scale(1); }
 }
 
-.elder-sidebar-illustration {
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: center;
-}
 
 .elder-sidebar-care-img {
-  width: 78%;
+  width: 100%;
   height: auto;
   max-height: 120px;
   object-fit: contain;
@@ -648,6 +642,7 @@
   font-size: 11px;
   color: #64748b;
   font-style: italic;
+  text-align: center;
   display: block;
 }
 
@@ -841,9 +836,18 @@
 }
 
 .elder-hero-leaves {
-  font-size: 70px;
-  opacity: 0.7;
-  user-select: none;
+  position: absolute;
+
+  right: 20px;
+  bottom: -5px;
+
+  z-index: 2;
+
+  font-size: 82px;
+
+  line-height: 1;
+
+  opacity: 0.8;
 }
 
 /* =========================================================
@@ -3066,5 +3070,86 @@ body.elder-high-contrast .elder-sidebar {
 @keyframes elder-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Keep the sidebar illustration fully visible at the bottom of the menu. */
+.elder-sidebar-illustration {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 12px 4px 6px;
+  border-top: 1px solid #e8edf4;
+  text-align: center;
+}
+
+.elder-sidebar-care-img {
+  display: block;
+  width: 100%;
+  height: clamp(96px, 18vh, 158px);
+  max-width: 100%;
+  max-height: none;
+  margin: 0 auto 6px;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.elder-sidebar-tagline {
+  line-height: 1.35;
+  white-space: normal;
+}
+
+@media (max-width: 768px) {
+  .elder-sidebar-illustration {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .elder-sidebar-care-img {
+    height: clamp(82px, 14vh, 118px);
+  }
+}
+
+/* Refined sidebar footer illustration */
+.elder-sidebar-illustration {
+  flex: 0 0 auto;
+  margin: auto 2px 0;
+  padding: 10px 8px 9px;
+  border: 1px solid #e5edf7;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f8fbff, #edf5ff);
+  box-shadow: 0 5px 16px rgba(35, 67, 109, 0.07);
+  text-align: center;
+}
+
+.elder-sidebar-care-img {
+  display: block;
+  width: min(100%, 164px);
+  height: clamp(124px, 18vh, 156px);
+  max-width: 100%;
+  margin: 0 auto 5px;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
+}
+
+.elder-sidebar-tagline {
+  display: block;
+  color: #47627f;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  white-space: normal;
+}
+
+@media (max-width: 768px) {
+  .elder-sidebar-illustration {
+    padding: 7px 7px 8px;
+  }
+
+  .elder-sidebar-care-img {
+    width: min(100%, 140px);
+    height: clamp(104px, 15vh, 128px);
   }
 }

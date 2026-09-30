@@ -158,7 +158,7 @@ function App() {
       {/* ELDER */}
 
       <Route
-        path="/elder/dashboard"
+        path="/elder/*"
         element={
           <ProtectedElderRoute>
             <ElderDashboard

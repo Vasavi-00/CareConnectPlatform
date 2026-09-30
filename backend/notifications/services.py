@@ -25,6 +25,17 @@ def create_notification(
     Create one notification for one recipient.
     """
 
+    # Respect the family account's in-app notification preference.
+    # Elder notifications remain unaffected by the family setting.
+    if getattr(recipient, "role", None) == "FAMILY":
+        family_profile = getattr(recipient, "family_profile", None)
+        if (
+            family_profile
+            and not family_profile.notification_enabled
+            and priority != Notification.Priority.URGENT
+        ):
+            return None
+
     return Notification.objects.create(
         recipient=recipient,
         elder=elder,

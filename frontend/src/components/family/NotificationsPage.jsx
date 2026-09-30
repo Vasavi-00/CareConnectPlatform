@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   FaBell,
@@ -7,126 +7,47 @@ import {
   FaRobot,
   FaTriangleExclamation,
   FaCheck,
-  FaTrash,
   FaFilter,
 } from "react-icons/fa6";
 
+import { getNotifications, markNotificationRead } from "../../services/api/familyApi";
 import "../../styles/family/NotificationsPage.css";
 
-export default function NotificationsPage() {
-
+export default function NotificationsPage({ selectedElder }) {
   const [filter, setFilter] = useState("All");
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "medicine",
-      icon: <FaPills />,
-      title: "Medicine Reminder",
-      message:
-        "Your parent's evening medicine is due at 8:00 PM.",
-      time: "10 min ago",
-      category: "Medicine",
-      unread: true,
-    },
-    {
-      id: 2,
-      type: "appointment",
-      icon: <FaCalendarCheck />,
-      title: "Upcoming Appointment",
-      message:
-        "General checkup is scheduled for tomorrow at 10:30 AM.",
-      time: "1 hour ago",
-      category: "Appointments",
-      unread: true,
-    },
-    {
-      id: 3,
-      type: "ai",
-      icon: <FaRobot />,
-      title: "AI Companion Update",
-      message:
-        "Your parent had a conversation with the AI Companion.",
-      time: "3 hours ago",
-      category: "AI Companion",
-      unread: true,
-    },
-    {
-      id: 4,
-      type: "emergency",
-      icon: <FaTriangleExclamation />,
-      title: "Health Alert",
-      message:
-        "Please review your parent's latest health alert.",
-      time: "Yesterday",
-      category: "Alerts",
-      unread: false,
-    },
-    {
-      id: 5,
-      type: "medicine",
-      icon: <FaPills />,
-      title: "Medicine Stock Update",
-      message:
-        "Your parent's Vitamin D medicine stock is running low.",
-      time: "Yesterday",
-      category: "Medicine",
-      unread: false,
-    },
-    {
-      id: 6,
-      type: "appointment",
-      icon: <FaCalendarCheck />,
-      title: "Appointment Reminder",
-      message:
-        "Eye checkup with Dr. Ramesh is scheduled for 15 Sep.",
-      time: "2 days ago",
-      category: "Appointments",
-      unread: false,
-    },
-  ]);
-
-  const unreadCount = notifications.filter(
-    (notification) => notification.unread
-  ).length;
-
-  const filteredNotifications =
-    filter === "All"
-      ? notifications
-      : filter === "Unread"
-      ? notifications.filter(
-          (notification) => notification.unread
-        )
-      : notifications.filter(
-          (notification) =>
-            notification.category === filter
-        );
-
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id
-          ? { ...notification, unread: false }
-          : notification
-      )
-    );
+  const loadNotifications = async () => {
+    try {
+      setError("");
+      const rows = await getNotifications();
+      const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
+      const visible = elderId ? rows.filter((item) => !item.elder || String(item.elder.id) === String(elderId)) : [];
+      setNotifications(visible.map((item) => {
+        const type = item.notification_type === "MEDICINE" ? "medicine" : item.notification_type === "APPOINTMENT" ? "appointment" : item.notification_type === "AI_SUMMARY" ? "ai" : item.notification_type === "SOS" ? "emergency" : "system";
+        const category = type === "medicine" ? "Medicine" : type === "appointment" ? "Appointments" : type === "ai" ? "AI Companion" : type === "emergency" ? "Alerts" : "System";
+        const icon = type === "medicine" ? <FaPills /> : type === "appointment" ? <FaCalendarCheck /> : type === "ai" ? <FaRobot /> : type === "emergency" ? <FaTriangleExclamation /> : <FaBell />;
+        return { ...item, type, category, icon, unread: !item.is_read, time: item.created_at ? new Date(item.created_at).toLocaleString() : "" };
+      }));
+    } catch (err) { setError(err.message || "Unable to load notifications."); }
+    finally { setLoading(false); }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({
-        ...notification,
-        unread: false,
-      }))
-    );
+  useEffect(() => { loadNotifications(); }, [selectedElder]);
+
+  const unreadCount = notifications.filter((item) => item.unread).length;
+  const filteredNotifications = filter === "All" ? notifications : filter === "Unread" ? notifications.filter((item) => item.unread) : notifications.filter((item) => item.category === filter);
+
+  const markAsRead = async (id) => {
+    try { await markNotificationRead(id); setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, unread: false, is_read: true } : item)); }
+    catch (err) { setError(err.message || "Unable to update notification."); }
   };
 
-  const deleteNotification = (id) => {
-    setNotifications((prev) =>
-      prev.filter(
-        (notification) => notification.id !== id
-      )
-    );
+  const markAllAsRead = async () => {
+    try { await Promise.all(notifications.filter((item) => item.unread).map((item) => markNotificationRead(item.id))); setNotifications((prev) => prev.map((item) => ({ ...item, unread: false, is_read: true }))); }
+    catch (err) { setError(err.message || "Unable to update notifications."); }
   };
 
   return (
@@ -210,6 +131,7 @@ export default function NotificationsPage() {
             "Appointments",
             "AI Companion",
             "Alerts",
+            "System",
           ].map((item) => (
 
             <button
@@ -253,7 +175,7 @@ export default function NotificationsPage() {
             <h2>Recent Notifications</h2>
 
             <p>
-              {filteredNotifications.length} notifications
+              {loading ? "Loading notifications…" : `${filteredNotifications.length} notifications`}
             </p>
           </div>
 
@@ -262,7 +184,7 @@ export default function NotificationsPage() {
 
         <div className="full-notification-list">
 
-          {filteredNotifications.length === 0 ? (
+          {error ? <div className="notifications-empty" role="alert">{error}</div> : loading ? <div className="notifications-empty">Loading notifications…</div> : filteredNotifications.length === 0 ? (
 
             <div className="notifications-empty">
 
@@ -337,12 +259,14 @@ export default function NotificationsPage() {
                 <button
                   type="button"
                   className="page-delete-notification"
+                  title="Mark as read"
+                  aria-label="Mark notification as read"
                   onClick={(e) => {
                     e.stopPropagation();
-                    deleteNotification(notification.id);
+                    markAsRead(notification.id);
                   }}
                 >
-                  <FaTrash />
+                  <FaCheck />
                 </button>
 
               </div>

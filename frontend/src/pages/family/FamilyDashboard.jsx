@@ -38,6 +38,19 @@ export default function FamilyDashboard() {
 
   const location = useLocation();
 
+  const refreshConnectedElders = async () => {
+    const data = await getConnectedElders();
+    const connectedElders = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.results)
+        ? data.results
+        : [];
+    setElders(connectedElders);
+    setSelectedElder((current) =>
+      connectedElders.find((elder) => elder.elder_id === current?.elder_id) || connectedElders[0] || null
+    );
+  };
+
   // =========================================================
   // LOAD FAMILY DASHBOARD DATA
   // =========================================================
@@ -159,6 +172,8 @@ export default function FamilyDashboard() {
 
       <FamilyHeader
         user={user}
+        selectedElder={selectedElder}
+        onElderConnected={refreshConnectedElders}
         familyProfile={familyProfile}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}

@@ -910,3 +910,16 @@
     justify-content: center;
   }
 }
+.message-error {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #fff0f0;
+  color: #a12b35;
+  font-size: 13px;
+}
+
+.support-delivery-note {
+  margin: 8px 0;
+  color: #697b91;
+  font-size: 12px;
+}

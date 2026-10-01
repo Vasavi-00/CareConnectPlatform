@@ -1376,9 +1376,25 @@
 }
 
 
-.overview-connect-hint strong {
+.overview-connect-hint button {
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--primary);
+  font: inherit;
   font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.overview-connect-hint button:hover,
+.overview-connect-hint button:focus-visible {
+  color: var(--primary-dark);
+}
+
+.overview-connect-hint button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 

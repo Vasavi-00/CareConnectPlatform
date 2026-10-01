@@ -318,6 +318,7 @@ export default function OverviewSection({
   user,
   familyProfile,
   selectedElder,
+  onAddElder,
 }) {
   const navigate = useNavigate();
 
@@ -656,7 +657,7 @@ export default function OverviewSection({
         </p>
 
         <span className="overview-connect-hint">
-          Use the <strong>+ Add Elder</strong> button in the
+          Use the <button type="button" onClick={onAddElder}>+ Add Elder</button> button in the
           header to connect an elder profile.
         </span>
 

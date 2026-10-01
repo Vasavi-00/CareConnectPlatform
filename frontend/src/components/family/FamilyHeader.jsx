@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -37,6 +37,7 @@ export default function FamilyHeader({
   selectedElder,
   onSelectElder,
   onElderConnected,
+  onRegisterAddElder,
 }) {
 
   const navigate = useNavigate();
@@ -156,12 +157,17 @@ export default function FamilyHeader({
   // OPEN ADD ELDER
   // =====================================================
 
-  const openAddElder = () => {
+  const openAddElder = useCallback(() => {
     setElderCode("");
     setElderAdded(false);
     setConnectionError("");
     setShowAddElder(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    onRegisterAddElder?.(openAddElder);
+    return () => onRegisterAddElder?.(null);
+  }, [onRegisterAddElder, openAddElder]);
 
 
   // =====================================================

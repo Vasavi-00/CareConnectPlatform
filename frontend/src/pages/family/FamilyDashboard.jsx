@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Routes,
   Route,
@@ -32,11 +32,16 @@ export default function FamilyDashboard() {
   const [familyProfile, setFamilyProfile] = useState(null);
   const [elders, setElders] = useState([]);
   const [selectedElder, setSelectedElder] = useState(null);
+  const [addElderHandler, setAddElderHandler] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const location = useLocation();
+
+  const registerAddElder = useCallback((handler) => {
+    setAddElderHandler(() => handler);
+  }, []);
 
   const refreshConnectedElders = async () => {
     const data = await getConnectedElders();
@@ -176,6 +181,7 @@ export default function FamilyDashboard() {
         selectedElder={selectedElder}
         onSelectElder={setSelectedElder}
         onElderConnected={refreshConnectedElders}
+        onRegisterAddElder={registerAddElder}
         familyProfile={familyProfile}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -199,6 +205,7 @@ export default function FamilyDashboard() {
                   user={user}
                   familyProfile={familyProfile}
                   selectedElder={selectedElder}
+                  onAddElder={addElderHandler}
                 />
               }
             />

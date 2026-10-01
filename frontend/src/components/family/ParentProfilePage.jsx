@@ -4,14 +4,14 @@ import {
   FaLanguage, FaPlus, FaTrash, FaPen, FaXmark, FaFloppyDisk, FaShieldHeart,
 } from "react-icons/fa6";
 import {
-  createEmergencyContact, deleteEmergencyContact, getEmergencyContacts,
+  createEmergencyContact, deleteEmergencyContact, disconnectConnectedElder, getEmergencyContacts,
   updateEmergencyContact, updateConnectedElderProfile,
 } from "../../services/api/familyApi";
 import "../../styles/family/ParentProfilePage.css";
 
 const emptyContact = { name: "", relationship: "", phone: "", priority: 1, can_receive_sos: true };
 
-export default function ParentProfilePage({ selectedElder, onElderProfileUpdated }) {
+export default function ParentProfilePage({ selectedElder, onElderProfileUpdated, onElderDisconnected }) {
   const elderId = selectedElder?.elder_id || selectedElder?.elder?.id || selectedElder?.id;
   const elderName = selectedElder?.elder_name || selectedElder?.elder?.name || selectedElder?.name || "Connected elder";
   const canManageContacts = selectedElder?.can_manage_emergency_contacts !== false;
@@ -26,6 +26,24 @@ export default function ParentProfilePage({ selectedElder, onElderProfileUpdated
   const [elderProfileSaving, setElderProfileSaving] = useState(false);
   const [elderProfileError, setElderProfileError] = useState("");
   const [elderForm, setElderForm] = useState({});
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectError, setDisconnectError] = useState("");
+
+  const disconnectElder = async () => {
+    if (!elderId || disconnecting) return;
+    if (!window.confirm(`Disconnect ${elderName} from your family account? Their account and care data will remain intact.`)) return;
+
+    try {
+      setDisconnecting(true);
+      setDisconnectError("");
+      await disconnectConnectedElder(elderId);
+      await onElderDisconnected?.();
+    } catch (err) {
+      setDisconnectError(err.message || "Unable to disconnect this elder.");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   const openElderProfileEditor = () => {
     setElderForm({
@@ -144,6 +162,7 @@ export default function ParentProfilePage({ selectedElder, onElderProfileUpdated
             {canManageContacts && <div className="contact-actions"><button type="button" className="contact-edit" onClick={() => openEditContact(contact)}><FaPen /> Edit</button><button type="button" className="contact-delete" onClick={() => removeContact(contact.id)}><FaTrash /> Delete</button>{contact.priority !== 1 && <button type="button" className="primary-contact-button" onClick={() => makePrimary(contact)}>Make Primary</button>}</div>}
           </div>)}</div> : <p>No emergency contacts have been added.</p>}
         </section>
+        <section className="disconnect-elder-card"><div><h2>Remove Connected Elder</h2><p>This removes {elderName} from your family dashboard. Their account and care information will not be deleted.</p>{disconnectError && <p role="alert" className="profile-error">{disconnectError}</p>}</div><button type="button" className="disconnect-elder-button" onClick={disconnectElder} disabled={disconnecting}><FaTrash />{disconnecting ? "Disconnecting…" : "Disconnect Elder"}</button></section>
       </>}
 
       {showContactModal && <div className="profile-modal-overlay" onClick={() => setShowContactModal(false)}><div className="profile-modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><h2>{editingContact ? "Edit Emergency Contact" : "Add Emergency Contact"}</h2><p>Manage an emergency contact for {elderName}.</p></div><button type="button" onClick={() => setShowContactModal(false)}><FaXmark /></button></div>

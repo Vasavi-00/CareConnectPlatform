@@ -154,6 +154,27 @@ class MeView(APIView):
         )
 
 
+class DeleteAccountView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        if request.user.is_staff or request.user.is_superuser:
+            return Response(
+                {"detail": "Staff accounts cannot be deleted through this endpoint."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if request.user.role not in (User.Role.FAMILY, User.Role.ELDER):
+            return Response(
+                {"detail": "This account cannot be deleted through this endpoint."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 # ============================================================
 # ELDER PROFILE
 # ============================================================
@@ -253,6 +274,41 @@ class FamilyElderProfileUpdateView(APIView):
 
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DisconnectElderView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, elder_id):
+        if request.user.role != User.Role.FAMILY:
+            return Response(
+                {"detail": "Only family members can disconnect an elder."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            family = request.user.family_profile
+        except FamilyProfile.DoesNotExist:
+            return Response(
+                {"detail": "Family profile not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        relationship = FamilyElderRelationship.objects.filter(
+            family=family,
+            elder_id=elder_id,
+            is_active=True,
+        ).first()
+        if relationship is None:
+            return Response(
+                {"detail": "This elder is not connected to your family account."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        relationship.is_active = False
+        relationship.save(update_fields=["is_active", "updated_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ============================================================

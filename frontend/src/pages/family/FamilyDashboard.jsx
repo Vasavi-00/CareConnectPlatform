@@ -257,6 +257,7 @@ export default function FamilyDashboard() {
               element={
                 <ParentProfilePage
                   selectedElder={selectedElder}
+                  onElderDisconnected={refreshConnectedElders}
                   onElderProfileUpdated={(updated) => {
                     const applyUpdate = (elder) => {
                       if (String(elder?.elder_id || elder?.id) !== String(updated.id)) return elder;

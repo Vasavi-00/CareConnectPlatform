@@ -2736,6 +2736,73 @@
   gap: 24px;
 }
 
+.elder-delete-account-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 24px;
+  padding: 20px 22px;
+  border: 1px solid #f4caca;
+  border-radius: var(--cc-radius-md);
+  background: #fffafa;
+}
+
+.elder-delete-account-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: #ffe5e5;
+  color: #b42318;
+}
+
+.elder-delete-account-content {
+  flex: 1;
+}
+
+.elder-delete-account-content h2 {
+  margin: 0 0 4px;
+  color: #8f2727;
+  font-size: 17px;
+}
+
+.elder-delete-account-content p,
+.elder-delete-account-content span {
+  margin: 0;
+  color: #795f5f;
+  font-size: 13px;
+}
+
+.elder-delete-account-content span {
+  display: block;
+  margin-top: 5px;
+  color: #b42318;
+}
+
+.elder-delete-account-card button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #b42318;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.elder-delete-account-card button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .elder-profile-info-card {
   text-align: center;
 }

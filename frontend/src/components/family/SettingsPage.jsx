@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   FaGear, FaUser, FaLock, FaBell,
   FaShieldHeart, FaRightFromBracket, FaFloppyDisk, FaChevronRight,
+  FaTriangleExclamation, FaTrash,
 } from "react-icons/fa6";
-import { updateFamilyProfile } from "../../services/api/familyApi";
+import { deleteMyAccount, updateFamilyProfile } from "../../services/api/familyApi";
 import "../../styles/family/SettingsPage.css";
 
 export default function SettingsPage({ user, familyProfile, onProfileUpdated }) {
@@ -25,6 +26,8 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     setAccount({
@@ -73,6 +76,21 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
     navigate("/login", { replace: true });
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Permanently delete your family account and its associated data? This cannot be undone.")) return;
+
+    try {
+      setDeleting(true);
+      setDeleteError("");
+      await deleteMyAccount();
+      signOut();
+    } catch (err) {
+      setDeleteError(err.message || "Unable to delete your account.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="settings-page">
       <section className="settings-hero"><div className="settings-hero-left"><div className="settings-hero-icon"><FaGear /></div><div><h1>Settings</h1><p>Manage your CareConnect account and notification preferences.</p></div></div></section>
@@ -110,6 +128,7 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
       {error && <p role="alert" className="settings-error">{error}</p>}
       <div className="settings-save-area">{saved && <span className="settings-saved-message">✓ Changes saved successfully</span>}<button type="button" className="settings-save-button" onClick={handleSave} disabled={saving}><FaFloppyDisk />{saving ? "Saving…" : "Save Changes"}</button></div>
       <section className="logout-card"><div className="logout-icon"><FaRightFromBracket /></div><div className="logout-content"><h3>Sign Out</h3><p>Sign out of your CareConnect family account on this device.</p></div><button type="button" className="logout-button" onClick={signOut}>Sign Out</button></section>
+      <section className="delete-account-card"><div className="delete-account-icon"><FaTriangleExclamation /></div><div className="delete-account-content"><h3>Delete Family Account</h3><p>Permanently delete your account and associated family data.</p>{deleteError && <span role="alert">{deleteError}</span>}</div><button type="button" className="delete-account-button" onClick={handleDeleteAccount} disabled={deleting}><FaTrash />{deleting ? "Deleting…" : "Delete Account"}</button></section>
     </div>
   );
 }

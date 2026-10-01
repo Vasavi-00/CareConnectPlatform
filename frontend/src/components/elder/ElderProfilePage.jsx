@@ -16,9 +16,11 @@ import {
   FaPen,
   FaXmark,
   FaFloppyDisk,
+  FaTrash,
+  FaTriangleExclamation,
 } from "react-icons/fa6";
 
-import { updateElderProfile } from "../../services/api/elderApi";
+import { deleteMyAccount, updateElderProfile } from "../../services/api/elderApi";
 
 export default function ElderProfilePage({
   user,
@@ -42,6 +44,8 @@ export default function ElderProfilePage({
   const [profileForm, setProfileForm] = useState({});
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -96,6 +100,24 @@ export default function ElderProfilePage({
       setProfileError(err?.message || "Unable to update your profile.");
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Permanently delete your elder account and associated care data? This cannot be undone.")) return;
+
+    try {
+      setDeletingAccount(true);
+      setDeleteAccountError("");
+      await deleteMyAccount();
+      localStorage.removeItem("careconnect_access");
+      localStorage.removeItem("careconnect_refresh");
+      localStorage.removeItem("careconnect_user");
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setDeleteAccountError(err?.message || "Unable to delete your account.");
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
@@ -373,6 +395,16 @@ export default function ElderProfilePage({
           </form>
         </div>
       </div>
+
+      <section className="elder-delete-account-card">
+        <div className="elder-delete-account-icon"><FaTriangleExclamation /></div>
+        <div className="elder-delete-account-content">
+          <h2>Delete Elder Account</h2>
+          <p>Permanently delete your account and associated care data.</p>
+          {deleteAccountError && <span role="alert">{deleteAccountError}</span>}
+        </div>
+        <button type="button" onClick={handleDeleteAccount} disabled={deletingAccount}><FaTrash />{deletingAccount ? "Deleting…" : "Delete Account"}</button>
+      </section>
 
       {editingProfile && (
         <div className="elder-profile-edit-overlay" onClick={() => setEditingProfile(false)}>

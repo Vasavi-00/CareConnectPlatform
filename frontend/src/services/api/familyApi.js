@@ -75,6 +75,16 @@ export async function getMe() {
   return request("/auth/me/");
 }
 
+export async function deleteMyAccount() {
+  return request("/auth/account/", { method: "DELETE" });
+}
+
+export async function disconnectConnectedElder(elderId) {
+  return request(`/connections/family/elders/${elderId}/disconnect/`, {
+    method: "DELETE",
+  });
+}
+
 export async function getFamilyProfile() {
   return request("/family/profile/");
 }

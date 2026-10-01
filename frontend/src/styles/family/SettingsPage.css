@@ -860,8 +860,86 @@
   color: #b42318;
 }
 
+.delete-account-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 14px;
+  padding: 20px 22px;
+  border: 1px solid #f4caca;
+  border-radius: 17px;
+  background: #fffafa;
+}
+
+.delete-account-icon {
+  width: 43px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: #ffe5e5;
+  color: #b42318;
+}
+
+.delete-account-content {
+  flex: 1;
+}
+
+.delete-account-content h3 {
+  margin: 0 0 4px;
+  color: #8f2727;
+  font-size: 14px;
+}
+
+.delete-account-content p,
+.delete-account-content span {
+  margin: 0;
+  color: #8d6262;
+  font-size: 11px;
+}
+
+.delete-account-content span {
+  display: block;
+  margin-top: 5px;
+  color: #b42318;
+}
+
+.delete-account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 9px;
+  background: #b42318;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.delete-account-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 @media (max-width: 640px) {
   .settings-account-fields {
     grid-template-columns: 1fr;
+  }
+
+  .delete-account-card {
+    flex-wrap: wrap;
+  }
+
+  .delete-account-content {
+    flex-basis: calc(100% - 60px);
+  }
+
+  .delete-account-button {
+    margin-left: 58px;
   }
 }

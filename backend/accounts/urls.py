@@ -4,9 +4,11 @@ from .views import (
     SignupView,
     LoginView,
     MeView,
+    DeleteAccountView,
 
     ElderProfileView,
     FamilyElderProfileUpdateView,
+    DisconnectElderView,
     FamilyProfileView,
     FindElderView,
     ConnectElderView,
@@ -48,6 +50,11 @@ urlpatterns = [
         MeView.as_view(),
         name="me"
     ),
+    path(
+        "auth/account/",
+        DeleteAccountView.as_view(),
+        name="delete-account",
+    ),
 
     # ========================================================
     # PROFILES
@@ -68,6 +75,11 @@ urlpatterns = [
         "family/elders/<int:elder_id>/profile/",
         FamilyElderProfileUpdateView.as_view(),
         name="family-elder-profile-update",
+    ),
+    path(
+        "connections/family/elders/<int:elder_id>/disconnect/",
+        DisconnectElderView.as_view(),
+        name="disconnect-elder",
     ),
 
     # ========================================================

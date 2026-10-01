@@ -61,6 +61,10 @@ export async function getMe() {
   return request("/auth/me/");
 }
 
+export async function deleteMyAccount() {
+  return request("/auth/account/", { method: "DELETE" });
+}
+
 export async function getElderProfile() {
   return request("/elder/profile/");
 }

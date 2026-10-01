@@ -212,6 +212,49 @@ class ElderProfileView(APIView):
         )
 
 
+class FamilyElderProfileUpdateView(APIView):
+    """Allow a family member to update an elder they are actively connected to."""
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, elder_id):
+        if request.user.role != User.Role.FAMILY:
+            return Response(
+                {"error": "Only family members can update a connected elder profile."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            family = request.user.family_profile
+        except FamilyProfile.DoesNotExist:
+            return Response(
+                {"error": "Family profile not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        relationship = FamilyElderRelationship.objects.filter(
+            family=family,
+            elder_id=elder_id,
+            is_active=True,
+        ).select_related("elder__user").first()
+        if relationship is None:
+            return Response(
+                {"error": "You are not actively connected to this elder."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ElderProfileSerializer(
+            relationship.elder,
+            data=request.data,
+            partial=True,
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 # ============================================================
 # FAMILY PROFILE
 # ============================================================
@@ -462,6 +505,10 @@ class ConnectElderView(APIView):
                     "name":
                         full_name
                         or elder.user.email,
+
+                    "first_name": elder.user.first_name,
+
+                    "last_name": elder.user.last_name,
 
                     "city":
                         elder.city,
@@ -769,6 +816,10 @@ class FamilyConnectedEldersView(APIView):
                     "name":
                         full_name
                         or elder.user.email,
+
+                    "first_name": elder.user.first_name,
+
+                    "last_name": elder.user.last_name,
 
                     "email":
                         elder.user.email,

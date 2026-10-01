@@ -291,6 +291,12 @@ export default function ElderDashboard() {
                   profile={profile}
                   onProfileUpdated={(updated) => {
                     setProfile((prev) => ({ ...prev, ...updated }));
+                    setUser((prev) => ({
+                      ...prev,
+                      first_name: updated.first_name ?? prev?.first_name,
+                      last_name: updated.last_name ?? prev?.last_name,
+                      phone: updated.phone ?? prev?.phone,
+                    }));
                   }}
                 />
               }

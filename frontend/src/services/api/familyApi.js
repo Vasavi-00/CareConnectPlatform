@@ -86,6 +86,13 @@ export async function updateFamilyProfile(payload) {
   });
 }
 
+export async function updateConnectedElderProfile(elderId, payload) {
+  return request(`/family/elders/${elderId}/profile/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getConnectedElders() { 
   const data = await request( "/connections/family/elders/" ); 
   return normalizeList(data); }
@@ -281,4 +288,3 @@ export async function getAIConversations(elderId) {
   const data = await request(`/ai/conversations/${query}`);
   return normalizeList(data);
 }
-

@@ -2740,6 +2740,20 @@
   text-align: center;
 }
 
+.elder-profile-info-card > .elder-card-header {
+  text-align: left;
+}
+
+.elder-profile-info-card > .elder-card-header .btn-save-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .profile-hero-center {
   padding-bottom: 20px;
   border-bottom: 1px solid #e2e8f0;
@@ -2837,6 +2851,55 @@
   flex-direction: column;
   gap: 4px;
 }
+
+.elder-profile-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.elder-profile-edit-modal {
+  width: min(680px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+}
+
+.elder-profile-edit-header,
+.elder-profile-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.elder-profile-edit-header { margin-bottom: 20px; }
+.elder-profile-edit-header h2 { margin: 0 0 5px; color: #0f172a; }
+.elder-profile-edit-header p { margin: 0; color: #64748b; font-size: 13px; }
+.elder-profile-edit-header > button { border: 0; background: #f1f5f9; border-radius: 8px; padding: 9px; cursor: pointer; }
+
+.elder-profile-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.elder-profile-edit-fields .form-group { display: flex; flex-direction: column; gap: 6px; color: #475569; font-size: 13px; }
+.elder-profile-edit-fields input,
+.elder-profile-edit-fields textarea { width: 100%; box-sizing: border-box; padding: 10px 11px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+.elder-profile-edit-fields textarea { min-height: 80px; resize: vertical; }
+.elder-profile-edit-actions { justify-content: flex-end; margin-top: 20px; }
+.elder-profile-edit-actions button { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+.elder-profile-edit-actions button[type="submit"] { background: #0b5ed7; color: white; }
+.elder-profile-edit-actions button:disabled { opacity: 0.6; cursor: wait; }
 
 /* Elder Settings Form */
 .elder-settings-form {
@@ -3099,6 +3162,10 @@ body.elder-high-contrast .elder-sidebar {
 }
 
 @media (max-width: 768px) {
+  .elder-profile-edit-fields {
+    grid-template-columns: 1fr;
+  }
+
   .elder-sidebar-illustration {
     padding-top: 8px;
     padding-bottom: 8px;

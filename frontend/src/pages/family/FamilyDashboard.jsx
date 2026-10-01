@@ -172,7 +172,9 @@ export default function FamilyDashboard() {
 
       <FamilyHeader
         user={user}
+        elders={elders}
         selectedElder={selectedElder}
+        onSelectElder={setSelectedElder}
         onElderConnected={refreshConnectedElders}
         familyProfile={familyProfile}
         sidebarOpen={sidebarOpen}
@@ -248,6 +250,30 @@ export default function FamilyDashboard() {
               element={
                 <ParentProfilePage
                   selectedElder={selectedElder}
+                  onElderProfileUpdated={(updated) => {
+                    const applyUpdate = (elder) => {
+                      if (String(elder?.elder_id || elder?.id) !== String(updated.id)) return elder;
+                      const fullName = `${updated.first_name || ""} ${updated.last_name || ""}`.trim();
+                      return {
+                        ...elder,
+                        ...updated,
+                        elder_id: elder.elder_id || updated.id,
+                        elder_name: fullName || elder.elder_name,
+                        elder_phone: updated.phone ?? elder.elder_phone,
+                        elder_date_of_birth: updated.date_of_birth ?? elder.elder_date_of_birth,
+                        elder_gender: updated.gender ?? elder.elder_gender,
+                        elder_address: updated.address ?? elder.elder_address,
+                        elder_city: updated.city ?? elder.elder_city,
+                        elder_state: updated.state ?? elder.elder_state,
+                        elder_pincode: updated.pincode ?? elder.elder_pincode,
+                        elder_preferred_language: updated.preferred_language ?? elder.elder_preferred_language,
+                        elder_medical_notes: updated.medical_notes ?? elder.elder_medical_notes,
+                        elder_emergency_notes: updated.emergency_notes ?? elder.elder_emergency_notes,
+                      };
+                    };
+                    setElders((current) => current.map(applyUpdate));
+                    setSelectedElder((current) => applyUpdate(current));
+                  }}
                 />
               }
             />
@@ -259,6 +285,15 @@ export default function FamilyDashboard() {
                 <SettingsPage
                   user={user}
                   familyProfile={familyProfile}
+                  onProfileUpdated={(updated) => {
+                    setFamilyProfile((current) => ({ ...current, ...updated }));
+                    setUser((current) => ({
+                      ...current,
+                      first_name: updated.first_name ?? current?.first_name,
+                      last_name: updated.last_name ?? current?.last_name,
+                      phone: updated.phone ?? current?.phone,
+                    }));
+                  }}
                 />
               }
             />

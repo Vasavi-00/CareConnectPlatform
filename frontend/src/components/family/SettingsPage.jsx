@@ -7,13 +7,17 @@ import {
 import { updateFamilyProfile } from "../../services/api/familyApi";
 import "../../styles/family/SettingsPage.css";
 
-export default function SettingsPage({ user, familyProfile }) {
+export default function SettingsPage({ user, familyProfile, onProfileUpdated }) {
   const navigate = useNavigate();
   const [account, setAccount] = useState({
     first_name: familyProfile?.first_name || user?.first_name || "",
     last_name: familyProfile?.last_name || user?.last_name || "",
     phone: familyProfile?.phone || user?.phone || "",
+    alternate_phone: familyProfile?.alternate_phone || "",
     address: familyProfile?.address || "",
+    city: familyProfile?.city || "",
+    state: familyProfile?.state || "",
+    pincode: familyProfile?.pincode || "",
   });
   const [settings, setSettings] = useState({
     notification_enabled: familyProfile?.notification_enabled ?? true,
@@ -27,15 +31,24 @@ export default function SettingsPage({ user, familyProfile }) {
       first_name: familyProfile?.first_name || user?.first_name || "",
       last_name: familyProfile?.last_name || user?.last_name || "",
       phone: familyProfile?.phone || user?.phone || "",
+      alternate_phone: familyProfile?.alternate_phone || "",
       address: familyProfile?.address || "",
+      city: familyProfile?.city || "",
+      state: familyProfile?.state || "",
+      pincode: familyProfile?.pincode || "",
     });
     setSettings({
       notification_enabled: familyProfile?.notification_enabled ?? true,
     });
-  }, [familyProfile]);
+  }, [familyProfile, user]);
 
   const toggle = (key) => {
     setSettings((current) => ({ ...current, [key]: !current[key] }));
+    setSaved(false);
+  };
+
+  const updateAccountField = (key, value) => {
+    setAccount((current) => ({ ...current, [key]: value }));
     setSaved(false);
   };
 
@@ -43,7 +56,8 @@ export default function SettingsPage({ user, familyProfile }) {
     try {
       setSaving(true);
       setError("");
-      await updateFamilyProfile({ ...account, ...settings });
+      const updated = await updateFamilyProfile({ ...account, ...settings });
+      onProfileUpdated?.(updated);
       setSaved(true);
     } catch (err) {
       setError(err.message || "Unable to save settings.");
@@ -67,10 +81,14 @@ export default function SettingsPage({ user, familyProfile }) {
         <div className="settings-section-header"><div><h2><FaUser /> Account Settings</h2><p>Signed in as {user?.email || familyProfile?.email || "Family Member"}.</p></div></div>
         <div className="account-settings-list">
           <div className="settings-account-fields">
-            <label className="form-group">First name<input value={account.first_name} onChange={(e) => setAccount({ ...account, first_name: e.target.value })} /></label>
-            <label className="form-group">Last name<input value={account.last_name} onChange={(e) => setAccount({ ...account, last_name: e.target.value })} /></label>
-            <label className="form-group">Phone<input value={account.phone} onChange={(e) => setAccount({ ...account, phone: e.target.value })} /></label>
-            <label className="form-group">Address<input value={account.address} onChange={(e) => setAccount({ ...account, address: e.target.value })} /></label>
+            <label className="form-group">First name<input value={account.first_name} onChange={(e) => updateAccountField("first_name", e.target.value)} /></label>
+            <label className="form-group">Last name<input value={account.last_name} onChange={(e) => updateAccountField("last_name", e.target.value)} /></label>
+            <label className="form-group">Phone<input value={account.phone} onChange={(e) => updateAccountField("phone", e.target.value)} /></label>
+            <label className="form-group">Alternate phone<input value={account.alternate_phone} onChange={(e) => updateAccountField("alternate_phone", e.target.value)} /></label>
+            <label className="form-group">Address<input value={account.address} onChange={(e) => updateAccountField("address", e.target.value)} /></label>
+            <label className="form-group">City<input value={account.city} onChange={(e) => updateAccountField("city", e.target.value)} /></label>
+            <label className="form-group">State<input value={account.state} onChange={(e) => updateAccountField("state", e.target.value)} /></label>
+            <label className="form-group">PIN code<input value={account.pincode} onChange={(e) => updateAccountField("pincode", e.target.value)} /></label>
           </div>
           <div className="account-setting-item"><div className="account-setting-icon purple"><FaLock /></div><div className="account-setting-content"><strong>Password & Security</strong><span>Use account recovery to change your password.</span></div><button type="button" className="settings-action-button" onClick={() => navigate("/forgot-password")}>Reset Password <FaChevronRight /></button></div>
         </div>

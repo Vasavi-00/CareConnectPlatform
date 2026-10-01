@@ -6,6 +6,7 @@ from .views import (
     MeView,
 
     ElderProfileView,
+    FamilyElderProfileUpdateView,
     FamilyProfileView,
     FindElderView,
     ConnectElderView,
@@ -62,6 +63,11 @@ urlpatterns = [
         "family/profile/",
         FamilyProfileView.as_view(),
         name="family-profile"
+    ),
+    path(
+        "family/elders/<int:elder_id>/profile/",
+        FamilyElderProfileUpdateView.as_view(),
+        name="family-elder-profile-update",
     ),
 
     # ========================================================

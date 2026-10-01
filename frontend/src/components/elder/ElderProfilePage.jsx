@@ -13,6 +13,9 @@ import {
   FaLocationDot,
   FaPhone,
   FaIdCard,
+  FaPen,
+  FaXmark,
+  FaFloppyDisk,
 } from "react-icons/fa6";
 
 import { updateElderProfile } from "../../services/api/elderApi";
@@ -35,6 +38,10 @@ export default function ElderProfilePage({
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({});
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -58,6 +65,39 @@ export default function ElderProfilePage({
     `${profile?.first_name || user?.first_name || ""} ${
       profile?.last_name || user?.last_name || ""
     }`.trim() || firstName;
+
+  const openProfileEditor = () => {
+    setProfileForm({
+      first_name: profile?.first_name || user?.first_name || "",
+      last_name: profile?.last_name || user?.last_name || "",
+      phone: user?.phone || profile?.phone || "",
+      date_of_birth: profile?.date_of_birth || "",
+      gender: profile?.gender || "",
+      address: profile?.address || "",
+      city: profile?.city || "",
+      state: profile?.state || "",
+      pincode: profile?.pincode || "",
+      medical_notes: profile?.medical_notes || "",
+      emergency_notes: profile?.emergency_notes || "",
+    });
+    setProfileError("");
+    setEditingProfile(true);
+  };
+
+  const savePersonalProfile = async (event) => {
+    event.preventDefault();
+    try {
+      setProfileSaving(true);
+      setProfileError("");
+      const updated = await updateElderProfile(profileForm);
+      onProfileUpdated?.(updated);
+      setEditingProfile(false);
+    } catch (err) {
+      setProfileError(err?.message || "Unable to update your profile.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -127,6 +167,10 @@ export default function ElderProfilePage({
       <div className="elder-profile-grid">
         {/* Left: Personal Profile Card */}
         <div className="elder-card elder-profile-info-card">
+          <div className="elder-card-header">
+            <div><span className="card-eyebrow">PERSONAL DETAILS</span><h2>My Profile</h2></div>
+            <button type="button" className="btn-save-settings" onClick={openProfileEditor}><FaPen /> Edit Profile</button>
+          </div>
           <div className="profile-hero-center">
             <div className="profile-large-avatar">
               {firstName.charAt(0).toUpperCase()}
@@ -329,6 +373,21 @@ export default function ElderProfilePage({
           </form>
         </div>
       </div>
+
+      {editingProfile && (
+        <div className="elder-profile-edit-overlay" onClick={() => setEditingProfile(false)}>
+          <form className="elder-profile-edit-modal" onClick={(event) => event.stopPropagation()} onSubmit={savePersonalProfile}>
+            <div className="elder-profile-edit-header"><div><h2>Edit Personal Profile</h2><p>Update the details shared with your care circle.</p></div><button type="button" onClick={() => setEditingProfile(false)} aria-label="Close"><FaXmark /></button></div>
+            <div className="elder-profile-edit-fields">
+              {[["First name", "first_name"], ["Last name", "last_name"], ["Phone", "phone"], ["Date of birth", "date_of_birth"], ["Gender", "gender"], ["Address", "address"], ["City", "city"], ["State", "state"], ["PIN code", "pincode"]].map(([label, key]) => <label className="form-group" key={key}>{label}<input type={key === "date_of_birth" ? "date" : "text"} value={profileForm[key] || ""} onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
+              <label className="form-group">Medical notes<textarea value={profileForm.medical_notes || ""} onChange={(event) => setProfileForm((current) => ({ ...current, medical_notes: event.target.value }))} /></label>
+              <label className="form-group">Emergency notes<textarea value={profileForm.emergency_notes || ""} onChange={(event) => setProfileForm((current) => ({ ...current, emergency_notes: event.target.value }))} /></label>
+            </div>
+            {profileError && <p role="alert" className="profile-error">{profileError}</p>}
+            <div className="elder-profile-edit-actions"><button type="button" onClick={() => setEditingProfile(false)}>Cancel</button><button type="submit" disabled={profileSaving}><FaFloppyDisk />{profileSaving ? "Saving…" : "Save Profile"}</button></div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

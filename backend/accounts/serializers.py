@@ -248,13 +248,15 @@ class ElderProfileSerializer(serializers.ModelSerializer):
 
     first_name = serializers.CharField(
         source="user.first_name",
-        read_only=True,
+        required=False,
     )
 
     last_name = serializers.CharField(
         source="user.last_name",
-        read_only=True,
+        required=False,
     )
+
+    phone = serializers.CharField(source="user.phone", required=False, allow_blank=True)
 
     careconnect_id = serializers.CharField(
         read_only=True,
@@ -269,6 +271,7 @@ class ElderProfileSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "phone",
             "date_of_birth",
             "gender",
             "profile_photo",
@@ -292,6 +295,14 @@ class ElderProfileSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop("user", {})
+        for field, value in user_data.items():
+            setattr(instance.user, field, value)
+        if user_data:
+            instance.user.save(update_fields=list(user_data.keys()))
+        return super().update(instance, validated_data)
+
 
 # ============================================================
 # FAMILY PROFILE
@@ -314,7 +325,7 @@ class FamilyProfileSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    phone = serializers.CharField(source="user.phone", required=False)
+    phone = serializers.CharField(source="user.phone", required=False, allow_blank=True)
 
     class Meta:
         model = FamilyProfile

@@ -33,7 +33,9 @@ export default function FamilyHeader({
   sidebarOpen,
   setSidebarOpen,
   user,
+  elders = [],
   selectedElder,
+  onSelectElder,
   onElderConnected,
 }) {
 
@@ -62,6 +64,9 @@ export default function FamilyHeader({
   // =====================================================
 
   const [showAddElder, setShowAddElder] =
+    useState(false);
+
+  const [showElderSwitcher, setShowElderSwitcher] =
     useState(false);
 
   const [elderCode, setElderCode] =
@@ -122,6 +127,19 @@ export default function FamilyHeader({
       await Promise.all(notifications.filter((item) => item.unread).map((item) => markNotificationRead(item.id)));
       setNotifications((prev) => prev.map((item) => ({ ...item, unread: false, is_read: true })));
     } catch (err) { console.error("Failed to mark notifications as read:", err); }
+  };
+
+  const getElderName = (elder) => {
+    if (!elder) return "Elder";
+    if (elder.elder_name) return elder.elder_name;
+    if (elder.name) return elder.name;
+    if (elder.first_name || elder.last_name) {
+      return `${elder.first_name || ""} ${elder.last_name || ""}`.trim();
+    }
+    if (elder.careconnect_id || elder.careconnectId) {
+      return elder.careconnect_id || elder.careconnectId;
+    }
+    return "Elder";
   };
 
   const handleLogout = () => {
@@ -271,9 +289,73 @@ export default function FamilyHeader({
       <div className="header-actions">
 
 
-        {/* =================================================
-            ADD ELDER
-        ================================================= */}
+        {Array.isArray(elders) && elders.length > 1 && (
+          <div
+            className="elder-switcher-wrapper"
+            onMouseLeave={() => setShowElderSwitcher(false)}
+          >
+            <button
+              type="button"
+              className="elder-switcher-button"
+              onClick={() => setShowElderSwitcher((prev) => !prev)}
+            >
+              <FaUser />
+              <span>
+                {selectedElder ? getElderName(selectedElder) : "Switch Elder"}
+              </span>
+              <FaChevronDown className={`elder-switcher-chevron ${showElderSwitcher ? "open" : ""}`} />
+            </button>
+
+            {showElderSwitcher && (
+              <div className="elder-switcher-menu">
+                {elders.map((elder) => {
+                  const elderIdValue = elder?.elder_id || elder?.id || elder?.careconnect_id || elder?.careconnectId;
+                  // Compare one stable identifier at a time. Comparing optional
+                  // fields with `===` can mark every elder active when both
+                  // objects omit that field (undefined === undefined).
+                  const selectedId =
+                    selectedElder?.elder_id ??
+                    selectedElder?.elder?.id ??
+                    selectedElder?.id;
+                  const optionId =
+                    elder?.elder_id ?? elder?.elder?.id ?? elder?.id;
+                  const selectedCareConnectId =
+                    selectedElder?.careconnect_id ||
+                    selectedElder?.careconnectId ||
+                    selectedElder?.elder?.careconnect_id ||
+                    selectedElder?.elder?.careconnectId;
+                  const optionCareConnectId =
+                    elder?.careconnect_id ||
+                    elder?.careconnectId ||
+                    elder?.elder?.careconnect_id ||
+                    elder?.elder?.careconnectId;
+                  const isActive = Boolean(
+                    (selectedId != null && optionId != null && String(selectedId) === String(optionId)) ||
+                    (selectedCareConnectId && optionCareConnectId &&
+                      String(selectedCareConnectId) === String(optionCareConnectId))
+                  );
+
+                  return (
+                    <button
+                      key={elderIdValue || getElderName(elder)}
+                      type="button"
+                      className={`elder-switcher-option ${isActive ? "active" : ""}`}
+                      onClick={() => {
+                        if (typeof onSelectElder === "function") {
+                          onSelectElder(elder);
+                        }
+                        setShowElderSwitcher(false);
+                      }}
+                    >
+                      <span>{getElderName(elder)}</span>
+                      {isActive && <FaCheck />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           type="button"

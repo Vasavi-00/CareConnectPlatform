@@ -179,6 +179,117 @@
    ADD ELDER
    ===================================================== */
 
+.elder-switcher-wrapper {
+  position: relative;
+}
+
+/* Keep the pointer inside the switcher while it crosses the visual gap. */
+.elder-switcher-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 210px;
+  height: 8px;
+}
+
+.elder-switcher-button {
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 0 14px;
+
+  border: 1px solid #d7e7ff;
+  border-radius: 10px;
+
+  background: #f3f8ff;
+  color: #0b5ed7;
+
+  font-family: "Poppins", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.elder-switcher-button:hover {
+  background: #e8f1ff;
+}
+
+.elder-switcher-button span {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elder-switcher-chevron {
+  transition: transform 0.2s ease;
+}
+
+.elder-switcher-chevron.open {
+  transform: rotate(180deg);
+}
+
+.elder-switcher-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+
+  min-width: 210px;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 8px;
+
+  border: 1px solid #dfeaf8;
+  border-radius: 12px;
+
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+
+  z-index: 40;
+}
+
+.elder-switcher-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+  color: #1f2937;
+
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.elder-switcher-option:hover {
+  background: #f3f7ff;
+}
+
+.elder-switcher-option.active {
+  background: #edf5ff;
+  color: #0b5ed7;
+}
+
 .add-elder-btn {
   height: 40px;
 

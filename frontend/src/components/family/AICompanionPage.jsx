@@ -6,7 +6,7 @@ import {
   FaHeart,
   FaMagnifyingGlass,
 } from "react-icons/fa6";
-import { getAIConversations } from "../../services/api/familyApi";
+import { getAIConversations, getNotifications } from "../../services/api/familyApi";
 import "../../styles/family/AICompanionPage.css";
 
 export default function AICompanionPage({ selectedElder }) {
@@ -14,6 +14,7 @@ export default function AICompanionPage({ selectedElder }) {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [aiSummary, setAiSummary] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -31,6 +32,38 @@ export default function AICompanionPage({ selectedElder }) {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [selectedElder]);
+
+  // Load latest AI summary notification for the selected elder
+  useEffect(() => {
+    let active = true;
+    const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
+    if (!elderId) {
+      setAiSummary("");
+      return () => { active = false; };
+    }
+
+    (async () => {
+      try {
+        const rows = await getNotifications();
+        const visible = rows.filter((n) => n.elder && String(n.elder.id) === String(elderId));
+        const aiRows = visible.filter((n) => n.notification_type === "AI_SUMMARY");
+        if (!active) return;
+        if (aiRows.length) {
+          // Use the latest AI summary (most recent created_at)
+          aiRows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          setAiSummary(aiRows[0].message || "");
+        } else {
+          setAiSummary("");
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error("Failed to load AI summaries:", err);
+        setAiSummary("");
+      }
+    })();
+
+    return () => { active = false; };
+  }, [selectedElder, conversations]);
 
   const visibleConversations = useMemo(() => conversations.map((conversation) => {
     const messages = (conversation.messages || []).filter((message) => !message.is_private);
@@ -90,7 +123,17 @@ export default function AICompanionPage({ selectedElder }) {
 
       <section className="family-concern-card">
         <div className="concern-icon"><FaHeart /></div>
-        <div className="concern-content"><span className="concern-label">Privacy</span><h2>Respecting your parent’s privacy</h2><p>The companion service currently provides conversation history. It does not provide mood analysis or family insight summaries.</p></div>
+        <div className="concern-content">
+          <span className="concern-label">Privacy</span>
+          <h2>Respecting your parent’s privacy</h2>
+          <p>The companion service shares conversation history with family. It can now also send a short, privacy-respecting mood summary when your parent chooses to share—private messages remain hidden.</p>
+          {aiSummary ? (
+            <div className="ai-summary-notice">
+              <strong>Latest AI Summary:</strong>
+              <p>{aiSummary}</p>
+            </div>
+          ) : null}
+        </div>
       </section>
     </div>
   );

@@ -17,6 +17,7 @@ import ElderAICompanionPage from "../../components/elder/ElderAICompanionPage";
 import ElderSOSPage from "../../components/elder/ElderSOSPage";
 import ElderSOSModal from "../../components/elder/ElderSOSModal";
 import ElderProfilePage from "../../components/elder/ElderProfilePage";
+import { speakText } from "../../services/voice/speechSynthesis";
 
 import {
   getMe,
@@ -27,6 +28,7 @@ import {
   getUnreadNotificationCount,
   getConnectedFamily,
   getEmergencyContacts,
+  takeMedicine,
 } from "../../services/api/elderApi";
 
 import "../../styles/elder/elder-dashboard.css";
@@ -42,6 +44,12 @@ export default function ElderDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [emergencyContacts, setEmergencyContacts] = useState([]);
+  const [voiceRemindersEnabled, setVoiceRemindersEnabled] = useState(() =>
+    localStorage.getItem("careconnect_voice_medicine_reminders") === "enabled"
+  );
+  const [dueMedicine, setDueMedicine] = useState(null);
+  const [reminderError, setReminderError] = useState("");
+  const [markingDose, setMarkingDose] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -123,6 +131,74 @@ export default function ElderDashboard() {
     loadDashboardData();
   }, []);
 
+  // Check the schedule while the elder dashboard is open. Speech starts only
+  // after the elder enables it with a tap, as required by browsers.
+  useEffect(() => {
+    const checkDueMedicines = () => {
+      const now = new Date();
+      const dateKey = now.toLocaleDateString("en-CA");
+      const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+      const taken = JSON.parse(localStorage.getItem("careconnect_elder_taken_doses") || "{}");
+      const announced = JSON.parse(localStorage.getItem("careconnect_elder_announced_doses") || "{}");
+      let due = null;
+
+      for (const medicine of medicines) {
+        if (medicine.is_active === false || (medicine.quantity ?? 1) <= 0) continue;
+        const entries = Array.isArray(medicine.times) ? medicine.times : [medicine.timing];
+        for (const entry of entries) {
+          const timeMatch = String(typeof entry === "object" ? entry.time || "" : entry || "").match(/(?:^|\D)([01]?\d|2[0-3]):([0-5]\d)(?:\D|$)/);
+          if (!timeMatch) continue;
+          const time = `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}`;
+          const scheduledMinute = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
+          const key = `${dateKey}:${medicine.id}:${time}`;
+          if (taken[key] || minuteOfDay < scheduledMinute) continue;
+          due = { medicine, time, key };
+          if (voiceRemindersEnabled && minuteOfDay - scheduledMinute <= 2 && !announced[key]) {
+            const telugu = profile?.preferred_language === "Telugu";
+            speakText(
+              telugu
+                ? `మందు సమయం అయింది. దయచేసి ${medicine.name}, ${medicine.dosage || ""} తీసుకోండి. తీసుకున్న తర్వాత తీసుకున్నట్లు గుర్తించండి.`
+                : `It is time to take ${medicine.name}, ${medicine.dosage || ""}. Please take it now, then mark it as taken.`,
+              telugu ? "te-IN" : "en-IN",
+              profile?.voice_speed || 1
+            );
+            localStorage.setItem("careconnect_elder_announced_doses", JSON.stringify({ ...announced, [key]: true }));
+          }
+          break;
+        }
+        if (due) break;
+      }
+      setDueMedicine(due);
+    };
+
+    checkDueMedicines();
+    const interval = window.setInterval(checkDueMedicines, 15000);
+    return () => window.clearInterval(interval);
+  }, [medicines, profile, voiceRemindersEnabled]);
+
+  const enableVoiceReminders = () => {
+    localStorage.setItem("careconnect_voice_medicine_reminders", "enabled");
+    setVoiceRemindersEnabled(true);
+    speakText(profile?.preferred_language === "Telugu" ? "మందుల వాయిస్ రిమైండర్లు ప్రారంభించబడ్డాయి." : "Voice medicine reminders are on.", profile?.preferred_language === "Telugu" ? "te-IN" : "en-IN", profile?.voice_speed || 1);
+  };
+
+  const markDueMedicineTaken = async () => {
+    if (!dueMedicine || markingDose) return;
+    setMarkingDose(true);
+    setReminderError("");
+    try {
+      await takeMedicine(dueMedicine.medicine.id, dueMedicine.medicine.quantity);
+      const taken = JSON.parse(localStorage.getItem("careconnect_elder_taken_doses") || "{}");
+      localStorage.setItem("careconnect_elder_taken_doses", JSON.stringify({ ...taken, [dueMedicine.key]: new Date().toISOString() }));
+      setDueMedicine(null);
+      await loadDashboardData();
+    } catch (err) {
+      setReminderError(err?.message || "Unable to record this dose. Please try again.");
+    } finally {
+      setMarkingDose(false);
+    }
+  };
+
   // Refresh notifications specifically
   const refreshNotifications = async () => {
     try {
@@ -169,6 +245,13 @@ export default function ElderDashboard() {
 
   return (
     <div className="elder-dashboard-shell">
+      {dueMedicine && (
+        <div className="elder-dose-reminder" role="status">
+          <div><strong>Medicine reminder</strong><span>It’s time for {dueMedicine.medicine.name} ({dueMedicine.medicine.dosage || "scheduled dose"}) at {dueMedicine.time}.</span></div>
+          <button type="button" onClick={markDueMedicineTaken} disabled={markingDose}>{markingDose ? "Saving…" : "I took it"}</button>
+          {reminderError && <small role="alert">{reminderError}</small>}
+        </div>
+      )}
       {/* 1. TOP NAVIGATION HEADER */}
       <ElderHeader
         sidebarOpen={sidebarOpen}
@@ -206,6 +289,8 @@ export default function ElderDashboard() {
                   setMood={setMood}
                   onOpenSosModal={() => setSosModalOpen(true)}
                   onRefreshData={loadDashboardData}
+                  voiceRemindersEnabled={voiceRemindersEnabled}
+                  onEnableVoiceReminders={enableVoiceReminders}
                 />
               }
             />
@@ -224,6 +309,8 @@ export default function ElderDashboard() {
                   setMood={setMood}
                   onOpenSosModal={() => setSosModalOpen(true)}
                   onRefreshData={loadDashboardData}
+                  voiceRemindersEnabled={voiceRemindersEnabled}
+                  onEnableVoiceReminders={enableVoiceReminders}
                 />
               }
             />

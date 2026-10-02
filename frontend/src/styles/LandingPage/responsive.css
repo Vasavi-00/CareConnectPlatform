@@ -757,6 +757,92 @@ img {
     }
 }
 
+/* Landing page navigation polish */
+@media (max-width: 768px) {
+    .header {
+        box-shadow: 0 8px 28px rgba(15, 43, 77, .10);
+    }
+
+    .menu-icon {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 1px solid #dce8f8;
+        border-radius: 14px;
+        background: #f3f8ff;
+        color: #0b5ed7;
+        font-size: 21px;
+        line-height: 1;
+        transition: background .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+
+    .menu-icon:hover,
+    .menu-icon:focus-visible {
+        background: #e7f1ff;
+        box-shadow: 0 0 0 4px rgba(11, 94, 215, .12);
+        outline: none;
+    }
+
+    .nav-menu {
+        gap: 4px;
+        padding: 22px 20px 32px;
+        border-top: 1px solid #edf2f8;
+        box-shadow: 0 18px 35px rgba(15, 43, 77, .14);
+    }
+
+    .nav-menu > li {
+        width: 100%;
+        max-width: 360px;
+    }
+
+    .nav-menu > li > a {
+        border-radius: 12px;
+        color: #24364b;
+        font-weight: 600;
+        transition: background .2s ease, color .2s ease;
+    }
+
+    .nav-menu > li > a:hover,
+    .nav-menu > li > a:focus-visible {
+        background: #f1f7ff;
+        color: #0b5ed7;
+        outline: none;
+    }
+
+    .mobile-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: 360px;
+        margin-top: 16px;
+        padding-top: 18px;
+        border-top: 1px solid #e8eef6;
+    }
+
+    .mobile-buttons .login-btn,
+    .mobile-buttons .signup-btn {
+        width: 100%;
+        max-width: none;
+        min-height: 48px;
+        height: 48px;
+        border-radius: 14px;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .mobile-buttons .login-btn {
+        border: 1px solid #c9dcf5;
+        background: #fff;
+    }
+
+    .mobile-buttons .signup-btn {
+        box-shadow: 0 8px 18px rgba(11, 94, 215, .2);
+    }
+}
+
 /* =========================================================
    EXTRA SMALL PHONES: <= 360px
    ========================================================= */
@@ -811,4 +897,3 @@ img {
         height: 230px;
     }
 }
-

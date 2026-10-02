@@ -1,4 +1,5 @@
 import datetime
+import re
 from django.utils import timezone
 from accounts.models import ElderProfile, FamilyElderRelationship
 from medicines.models import Medicine
@@ -174,6 +175,85 @@ def process_elder_message(elder, message_text, language="English"):
         content=reply,
         is_private=False,
     )
+
+    # After recording reply, create a short summary of the conversation and
+    # send it along with recent chat history to connected family members.
+    def generate_mood_summary(message, elder_name, language="English", offer_sos=False, offer_family_call=False):
+        """
+        Create a concise summary focused on mood and feelings from the elder's message.
+        Uses simple keyword heuristics to classify mood and intensity.
+        """
+
+        m = (message or "").strip()
+        lower = m.lower()
+
+        # Map keywords to moods
+        mood_map = {
+            "sad": ["sad", "sadness", "depressed", "unhappy", "bitter", "cry"],
+            "lonely": ["lonely", "alone", "isolated", "no one"],
+            "anxious": ["anxious", "anxiety", "worried", "worried about", "worried that"],
+            "angry": ["angry", "mad", "furious", "upset"],
+            "tired": ["tired", "sleepy", "exhausted", "fatigued"],
+            "happy": ["happy", "good", "great", "joy", "pleased"],
+            "grateful": ["thank", "thanks", "grateful", "blessed"],
+        }
+
+        detected = []
+        for mood, keys in mood_map.items():
+            for k in keys:
+                if k in lower:
+                    detected.append(mood)
+                    break
+
+        # Detect intensity
+        intensity_words = ["very", "extremely", "really", "so", "terribly", "deeply"]
+        intensity = ""
+        if any(w in lower for w in intensity_words):
+            intensity = "very "
+
+        primary_mood = detected[0] if detected else "unspecified"
+
+        # Short excerpt for context
+        excerpt = re.split(r"[\.!?]\s+", m)[0]
+        if len(excerpt) > 200:
+            excerpt = excerpt[:197] + "..."
+
+        action = []
+        if offer_sos:
+            action.append("SOS suggested")
+        if offer_family_call:
+            action.append("family call recommended")
+
+        action_str = ", ".join(action) if action else ""
+
+        summary_parts = [f"{elder_name} appears {intensity}{primary_mood}."]
+        if excerpt:
+            summary_parts.append(f"Said: \"{excerpt}\".")
+        if action_str:
+            summary_parts.append(f"Action: {action_str}.")
+
+        return " ".join(summary_parts)
+
+    try:
+        summary_text = generate_mood_summary(text, elder_name, language, offer_sos, offer_family_call)
+
+        # Build a compact chat history: last 10 messages from this conversation
+        messages = conv.messages.order_by("created_at").all()[-10:]
+        history_lines = []
+        for m in messages:
+            who = "Elder" if m.sender == "elder" else "AI"
+            # Keep each message short to avoid very long notifications
+            content = (m.content or "").replace("\n", " ")
+            if len(content) > 300:
+                content = content[:297] + "..."
+            history_lines.append(f"{who}: {content}")
+
+        chat_history = "\n".join(history_lines)
+
+        create_ai_summary_notification(elder=elder, summary=summary_text, chat_history=chat_history)
+    except Exception:
+        # Don't let notification failures affect the chat flow
+        pass
 
     conv.save()  # update updated_at
 

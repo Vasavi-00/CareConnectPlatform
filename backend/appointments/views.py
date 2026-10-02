@@ -7,6 +7,7 @@ from notifications.services import (
     create_appointment_notification,
     create_appointment_updated_notification,
     create_appointment_cancelled_notification,
+    send_appointment_reminder_notifications,
 )
 
 from .models import Appointment
@@ -116,7 +117,7 @@ class AppointmentListCreateView(
             write=False
         )
 
-        return (
+        queryset = (
             Appointment.objects
             .filter(elder_id=elder_id)
             .select_related(
@@ -126,6 +127,11 @@ class AppointmentListCreateView(
                 "created_by__user",
             )
         )
+
+        for appointment in queryset:
+            send_appointment_reminder_notifications(appointment)
+
+        return queryset
 
     def perform_create(self, serializer):
         elder_id = (
@@ -155,6 +161,7 @@ class AppointmentListCreateView(
             elder=elder,
             appointment=appointment,
         )
+        send_appointment_reminder_notifications(appointment)
 
 
 # ============================================================
@@ -218,6 +225,7 @@ class AppointmentDetailView(
             elder=updated_appointment.elder,
             appointment=updated_appointment,
         )
+        send_appointment_reminder_notifications(updated_appointment)
 
     def perform_destroy(self, instance):
         create_appointment_cancelled_notification(

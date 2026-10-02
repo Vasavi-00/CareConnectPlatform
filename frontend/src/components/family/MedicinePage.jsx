@@ -33,6 +33,8 @@ export default function MedicinePage({ selectedElder }) {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [medicineToDelete, setMedicineToDelete] = useState(null);
+  const [showDeleteMedicineModal, setShowDeleteMedicineModal] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -56,33 +58,85 @@ export default function MedicinePage({ selectedElder }) {
     return () => { active = false; };
   }, [selectedElder]);
 
+  const createIntakeSlot = () => ({ timing: "Morning", time: "08:00" });
+
   const [newMedicine, setNewMedicine] = useState({
     name: "",
     dosage: "",
-    schedule: "",
+    frequency: "Once daily",
+    timing: "Morning",
+    time: "08:00",
+    foodTiming: "After Food",
     stock: "",
+    lowStockThreshold: "5",
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: "",
+    prescribedBy: "",
+    notes: "",
     unit: "tablets",
   });
 
+  const [intakeSlots, setIntakeSlots] = useState([createIntakeSlot()]);
+
+  const normalizeScheduleValue = (value) => {
+    if (!value) return null;
+
+    const text = String(value).toLowerCase();
+    const keywordMatch = text.match(/(morning|afternoon|noon|evening|night)/i);
+    if (keywordMatch) {
+      const keyword = keywordMatch[1].toLowerCase();
+      if (keyword.includes("morning")) return { period: "morning", hour: 8 };
+      if (keyword.includes("afternoon") || keyword.includes("noon")) return { period: "afternoon", hour: 13 };
+      return { period: "night", hour: 20 };
+    }
+
+    const timeMatch = text.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    if (!timeMatch) return null;
+
+    let hour = Number(timeMatch[1]);
+    const suffix = (timeMatch[3] || "").toLowerCase();
+    if (suffix === "pm" && hour < 12) hour += 12;
+    if (suffix === "am" && hour === 12) hour = 0;
+
+    const period = hour >= 5 && hour < 12 ? "morning" : hour >= 12 && hour < 17 ? "afternoon" : "night";
+    return { period, hour };
+  };
+
+  const getMedicineTimeValue = (medicine) => {
+    const rawValues = [
+      medicine.timing,
+      ...(Array.isArray(medicine.times) ? medicine.times : []),
+      medicine.frequency,
+    ].filter(Boolean);
+
+    const parsed = rawValues
+      .map((value) => normalizeScheduleValue(value))
+      .filter(Boolean)
+      .sort((a, b) => a.hour - b.hour);
+
+    if (parsed.length === 0) return 24 * 60;
+
+    return parsed[0].hour * 60;
+  };
+
   const today = new Date().toISOString().slice(0, 10);
-  const todayMedicines = medicines.filter((medicine) =>
-    medicine.is_active !== false
-    && (!medicine.start_date || medicine.start_date <= today)
-    && (!medicine.end_date || medicine.end_date >= today)
-  );
+  const todayMedicines = [...medicines]
+    .filter((medicine) =>
+      medicine.is_active !== false
+      && (!medicine.start_date || medicine.start_date <= today)
+      && (!medicine.end_date || medicine.end_date >= today)
+    )
+    .sort((a, b) => getMedicineTimeValue(a) - getMedicineTimeValue(b));
+
   const dosesFor = (period) => todayMedicines.filter((medicine) => {
-    const schedule = [medicine.timing, ...(Array.isArray(medicine.times) ? medicine.times : [])]
-      .filter(Boolean).join(" ").toLowerCase();
-    if (/morning/.test(schedule)) return period === "morning";
-    if (/afternoon|noon/.test(schedule)) return period === "afternoon";
-    if (/evening|night/.test(schedule)) return period === "night";
-    const time = schedule.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/);
-    if (!time) return false;
-    let hour = Number(time[1]);
-    if (time[3] === "pm" && hour < 12) hour += 12;
-    if (time[3] === "am" && hour === 12) hour = 0;
-    const bucket = hour >= 5 && hour < 12 ? "morning" : hour >= 12 && hour < 17 ? "afternoon" : "night";
-    return bucket === period;
+    const values = [medicine.timing, ...(Array.isArray(medicine.times) ? medicine.times : [])].filter(Boolean);
+    if (values.length === 0) return false;
+
+    return values.some((value) => {
+      const parsed = normalizeScheduleValue(value);
+      if (!parsed) return false;
+      return parsed.period === period;
+    });
   });
 
   const filteredMedicines = medicines.filter((medicine) => {
@@ -106,45 +160,165 @@ export default function MedicinePage({ selectedElder }) {
     }));
   };
 
+  const handleIntakeSlotChange = (index, field, value) => {
+    setIntakeSlots((prev) => prev.map((slot, slotIndex) => (
+      slotIndex === index ? { ...slot, [field]: value } : slot
+    )));
+  };
+
+  const addIntakeSlot = () => {
+    setIntakeSlots((prev) => [...prev, createIntakeSlot()]);
+  };
+
+  const parseIntakeSlotsFromMedicine = (medicine) => {
+    if (!medicine) return [createIntakeSlot()];
+
+    const rawEntries = [];
+
+    if (Array.isArray(medicine.times) && medicine.times.length) {
+      rawEntries.push(...medicine.times);
+    } else if (medicine.timing) {
+      rawEntries.push(...String(medicine.timing).split(";").map((value) => value.trim()).filter(Boolean));
+    }
+
+    if (!rawEntries.length) {
+      return [createIntakeSlot()];
+    }
+
+    return rawEntries.map((entry) => {
+      const text = String(entry).trim();
+      const timeMatch = text.match(/(\d{1,2}:\d{2})/);
+      const timingMatch = text.match(/(Morning|Afternoon|Evening|Night)/i);
+
+      return {
+        timing: timingMatch ? timingMatch[1] : "Morning",
+        time: timeMatch ? timeMatch[1] : "08:00",
+      };
+    });
+  };
+
+  const openMedicineForm = (medicine = null) => {
+    setError("");
+    setEditingMedicine(medicine ? medicine.id : null);
+    setNewMedicine({
+      name: medicine?.name || "",
+      dosage: medicine?.dosage || "",
+      frequency: medicine?.frequency || "Once daily",
+      timing: medicine?.timing || "Morning",
+      time: medicine?.times?.[0]?.match(/\d{1,2}:\d{2}/)?.[0] || "08:00",
+      foodTiming: medicine?.food_timing || medicine?.foodTiming || "After Food",
+      stock: medicine?.quantity ?? medicine?.stock ?? "",
+      lowStockThreshold: medicine?.low_stock_threshold ?? medicine?.lowStockThreshold ?? "5",
+      startDate: medicine?.start_date || new Date().toISOString().slice(0, 10),
+      endDate: medicine?.end_date || "",
+      prescribedBy: medicine?.prescribed_by || "",
+      notes: medicine?.notes || "",
+      unit: medicine?.unit || "tablets",
+    });
+    setIntakeSlots(parseIntakeSlotsFromMedicine(medicine));
+    setShowAddMedicine(true);
+  };
+
+  const closeMedicineForm = () => {
+    setShowAddMedicine(false);
+    setEditingMedicine(null);
+    setError("");
+    setNewMedicine({
+      name: "",
+      dosage: "",
+      frequency: "Once daily",
+      timing: "Morning",
+      time: "08:00",
+      foodTiming: "After Food",
+      stock: "",
+      lowStockThreshold: "5",
+      startDate: new Date().toISOString().slice(0, 10),
+      endDate: "",
+      prescribedBy: "",
+      notes: "",
+      unit: "tablets",
+    });
+    setIntakeSlots([createIntakeSlot()]);
+  };
+
+  const removeIntakeSlot = (index) => {
+    setIntakeSlots((prev) => {
+      if (prev.length === 1) return prev;
+      return prev.filter((_, slotIndex) => slotIndex !== index);
+    });
+  };
+
   const handleAddMedicine = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+
     const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
-    if (!elderId || !newMedicine.name || !newMedicine.dosage) return;
+    if (!elderId) {
+      setError("Please select an elder before adding a medicine.");
+      return;
+    }
+
+    if (!newMedicine.name || !newMedicine.dosage || !newMedicine.frequency || !newMedicine.stock || !newMedicine.startDate || !newMedicine.foodTiming) {
+      setError("Name, dosage, frequency, stock, start date and food timing are required.");
+      return;
+    }
+
+    const validSlots = intakeSlots.filter((slot) => slot.time && slot.time.trim());
+    if (!validSlots.length) {
+      setError("Please add at least one medicine time.");
+      return;
+    }
+
     try {
       setError("");
+
+      const intakeEntries = validSlots.map((slot) => `${slot.timing} at ${slot.time}`);
+
       const payload = {
         elder_id: elderId,
-        name: newMedicine.name,
-        dosage: newMedicine.dosage,
-        frequency: newMedicine.schedule || "Once daily",
-        timing: "",
+        name: newMedicine.name.trim(),
+        dosage: newMedicine.dosage.trim(),
+        frequency: newMedicine.frequency,
+        timing: intakeEntries.join("; "),
+        times: intakeEntries,
+        start_date: newMedicine.startDate,
+        end_date: newMedicine.endDate || null,
+        food_timing: newMedicine.foodTiming,
+        prescribed_by: newMedicine.prescribedBy.trim(),
+        notes: newMedicine.notes.trim(),
         quantity: Number(newMedicine.stock) || 0,
-        low_stock_threshold: 5,
+        low_stock_threshold: Number(newMedicine.lowStockThreshold) || 5,
+        refill_threshold: Number(newMedicine.lowStockThreshold) || 5,
         is_active: true,
       };
-      const created = editingMedicine
-        ? await updateMedicine(editingMedicine, payload)
-        : await createMedicine(payload);
-      const updatedMedicine = {
-        ...created,
-        stock: Number(created.quantity || 0),
+
+      if (editingMedicine) {
+        await updateMedicine(editingMedicine, payload);
+      } else {
+        await createMedicine(payload);
+      }
+
+      const refreshed = await getMedicines(elderId);
+      setMedicines(refreshed.map((item) => ({
+        ...item,
+        stock: Number(item.quantity || 0),
         unit: "units",
-        schedule: [created.frequency, created.timing].filter(Boolean).join(" · ") || "As prescribed",
-        status: Number(created.quantity || 0) <= Number(created.low_stock_threshold || 5) ? "Low Stock" : "Good",
-      };
-      setMedicines((prev) => editingMedicine
-        ? prev.map((item) => item.id === editingMedicine ? updatedMedicine : item)
-        : [...prev, updatedMedicine]);
-      setNewMedicine({ name: "", dosage: "", schedule: "", stock: "", unit: "tablets" });
-      setEditingMedicine(null);
-      setShowAddMedicine(false);
+        schedule: [item.frequency, item.timing].filter(Boolean).join(" · ") || "As prescribed",
+        status: Number(item.quantity || 0) <= Number(item.low_stock_threshold || 5) ? "Low Stock" : "Good",
+      })));
+
+      closeMedicineForm();
     } catch (err) { setError(err.message || "Unable to add medicine."); }
   };
 
-  const deleteMedicine = async (id) => {
+  const deleteMedicine = async () => {
+    if (!medicineToDelete) return;
+
     try {
-      await removeMedicine(id);
-      setMedicines((prev) => prev.filter((medicine) => medicine.id !== id));
+      setError("");
+      await removeMedicine(medicineToDelete.id);
+      setMedicines((prev) => prev.filter((medicine) => medicine.id !== medicineToDelete.id));
+      setShowDeleteMedicineModal(false);
+      setMedicineToDelete(null);
     } catch (err) { setError(err.message || "Unable to delete medicine."); }
   };
 
@@ -443,7 +617,26 @@ export default function MedicinePage({ selectedElder }) {
 
               {canManageMedicines && <button
                 type="button"
-                onClick={() => { setEditingMedicine(null); setNewMedicine({ name: "", dosage: "", schedule: "", stock: "", unit: "tablets" }); setShowAddMedicine(true); }}
+                onClick={() => {
+                  setEditingMedicine(null);
+                  setNewMedicine({
+                    name: "",
+                    dosage: "",
+                    frequency: "Once daily",
+                    timing: "Morning",
+                    time: "08:00",
+                    foodTiming: "After Food",
+                    stock: "",
+                    lowStockThreshold: "5",
+                    startDate: new Date().toISOString().slice(0, 10),
+                    endDate: "",
+                    prescribedBy: "",
+                    notes: "",
+                    unit: "tablets",
+                    times: [{ period: "Morning", time: "08:00" }],
+                  });
+                  setShowAddMedicine(true);
+                }}
                 className="action-item add-action"
               >
                 <FaPlus />
@@ -618,10 +811,10 @@ export default function MedicinePage({ selectedElder }) {
                     <div className="table-actions">
 
                       {canManageMedicines && <>
-                        <button title="Edit" type="button" onClick={() => { setEditingMedicine(medicine.id); setNewMedicine({ name: medicine.name, dosage: medicine.dosage, schedule: medicine.frequency || medicine.schedule, stock: medicine.stock, unit: "tablets" }); setShowAddMedicine(true); }}>
+                        <button title="Edit" type="button" onClick={() => openMedicineForm(medicine)}>
                           <FaPenToSquare />
                         </button>
-                        <button title="Delete" type="button" onClick={() => deleteMedicine(medicine.id)}><FaTrash /></button>
+                        <button title="Delete" type="button" onClick={() => { setMedicineToDelete(medicine); setShowDeleteMedicineModal(true); }}><FaTrash /></button>
                       </>}
 
                     </div>
@@ -645,11 +838,27 @@ export default function MedicinePage({ selectedElder }) {
           ADD MEDICINE MODAL
       ===================================== */}
 
+      {showDeleteMedicineModal && medicineToDelete && (
+        <div className="small-confirm-modal-backdrop" onClick={() => { setShowDeleteMedicineModal(false); setMedicineToDelete(null); }}>
+          <div className="small-confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="small-confirm-icon">
+              <FaTriangleExclamation />
+            </div>
+            <h3>Delete medicine?</h3>
+            <p>Delete <strong>{medicineToDelete.name}</strong>? This action cannot be undone.</p>
+            <div className="small-confirm-actions">
+              <button type="button" className="small-confirm-secondary" onClick={() => { setShowDeleteMedicineModal(false); setMedicineToDelete(null); }}>Keep</button>
+              <button type="button" className="small-confirm-danger" onClick={deleteMedicine}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {canManageMedicines && showAddMedicine && (
 
         <div
           className="medicine-modal-overlay"
-          onClick={() => setShowAddMedicine(false)}
+          onClick={closeMedicineForm}
         >
 
           <div
@@ -671,7 +880,7 @@ export default function MedicinePage({ selectedElder }) {
               </div>
 
               <button
-                onClick={() => setShowAddMedicine(false)}
+                onClick={closeMedicineForm}
               >
                 <FaXmark />
               </button>
@@ -722,54 +931,191 @@ export default function MedicinePage({ selectedElder }) {
                 <div className="form-group">
 
                   <label>
-                    Stock
+                    Stock (required)
                   </label>
 
                   <input
                     type="number"
                     name="stock"
+                    min="0"
                     placeholder="e.g. 30"
                     value={newMedicine.stock}
                     onChange={handleInputChange}
+                    required
                   />
 
                 </div>
 
               </div>
-
 
               <div className="form-row">
-
                 <div className="form-group">
-
                   <label>
-                    Schedule
+                    Frequency
                   </label>
-
-                  <input
-                    type="text"
-                    name="schedule"
-                    placeholder="e.g. 1 tablet daily at 8:00 AM"
-                    value={newMedicine.schedule}
+                  <select
+                    name="frequency"
+                    value={newMedicine.frequency}
                     onChange={handleInputChange}
-                  />
-
+                    required
+                  >
+                    <option value="Once daily">Once daily</option>
+                    <option value="Twice daily">Twice daily</option>
+                    <option value="Thrice daily">Thrice daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="As needed">As needed</option>
+                  </select>
                 </div>
 
-
-
-
+                <div className="form-group">
+                  <label>
+                    Food Timing
+                  </label>
+                  <select
+                    name="foodTiming"
+                    value={newMedicine.foodTiming}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="Before Food">Before Food</option>
+                    <option value="After Food">After Food</option>
+                    <option value="With Food">With Food</option>
+                    <option value="Any time">Any time</option>
+                  </select>
+                </div>
               </div>
 
+              <div className="form-row">
+                <div className="form-group intake-times-field">
+                  <div className="intake-time-header">
+                    <label>
+                      Intake Time
+                    </label>
+
+                    <button type="button" className="inline-add-time-link" onClick={addIntakeSlot}>
+                      Add another time
+                    </button>
+                  </div>
+
+                  <div className="intake-time-list">
+                    {intakeSlots.map((slot, index) => (
+                      <div key={`slot-${index}`} className="intake-time-input-row">
+                        <select
+                          value={slot.timing}
+                          onChange={(e) => handleIntakeSlotChange(index, "timing", e.target.value)}
+                        >
+                          <option value="Morning">Morning</option>
+                          <option value="Afternoon">Afternoon</option>
+                          <option value="Evening">Evening</option>
+                          <option value="Night">Night</option>
+                        </select>
+
+                        <input
+                          type="time"
+                          value={slot.time}
+                          onChange={(e) => handleIntakeSlotChange(index, "time", e.target.value)}
+                          required
+                        />
+
+                        {intakeSlots.length > 1 && (
+                          <button
+                            type="button"
+                            className="remove-time-btn"
+                            onClick={() => removeIntakeSlot(index)}
+                            aria-label="Remove intake time"
+                            title="Remove this time"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={newMedicine.startDate}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={newMedicine.endDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>
+                    Refill Alert at
+                  </label>
+                  <input
+                    type="number"
+                    name="lowStockThreshold"
+                    min="0"
+                    value={newMedicine.lowStockThreshold}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    Prescribed By
+                  </label>
+                  <input
+                    type="text"
+                    name="prescribedBy"
+                    placeholder="Doctor / Hospital"
+                    value={newMedicine.prescribedBy}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  rows="3"
+                  placeholder="Any extra instructions"
+                  value={newMedicine.notes}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              {error && (
+                <div className="medicine-form-error" role="alert">
+                  {error}
+                </div>
+              )}
 
               <div className="modal-actions">
 
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={() =>
-                    setShowAddMedicine(false)
-                  }
+                  onClick={closeMedicineForm}
                 >
                   Cancel
                 </button>
@@ -777,6 +1123,9 @@ export default function MedicinePage({ selectedElder }) {
                 <button
                   type="submit"
                   className="save-medicine-btn"
+                  onClick={() => {
+                    setError("");
+                  }}
                 >
                   <FaPlus />
                   {editingMedicine ? "Save Medicine" : "Add Medicine"}

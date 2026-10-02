@@ -37,6 +37,8 @@ export default function ElderOverviewSection({
   setMood,
   onOpenSosModal,
   onRefreshData,
+  voiceRemindersEnabled,
+  onEnableVoiceReminders,
 }) {
   const navigate = useNavigate();
 
@@ -333,6 +335,14 @@ export default function ElderOverviewSection({
           <p className="elder-hero-quote">
             “We're here to help you feel safe, healthy and connected.”
           </p>
+          <button
+            type="button"
+            className="elder-voice-reminder-toggle"
+            onClick={onEnableVoiceReminders}
+            aria-pressed={voiceRemindersEnabled}
+          >
+            <FaVolumeHigh /> {voiceRemindersEnabled ? "Voice reminders are on" : "Turn on voice medicine reminders"}
+          </button>
         </div>
 
         <div className="elder-hero-leaves">🌿🌿🌿</div>

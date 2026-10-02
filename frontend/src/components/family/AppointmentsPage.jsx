@@ -5,6 +5,7 @@ import {
   getConnectedElders,
   getAppointments,
   createAppointment,
+  updateAppointment,
   deleteAppointment,
 } from "../../services/api/familyApi";
 
@@ -18,6 +19,7 @@ import {
   FaVideo,
   FaPenToSquare,
   FaTrash,
+  FaTriangleExclamation,
   FaCircleCheck,
   FaClockRotateLeft,
 } from "react-icons/fa6";
@@ -70,6 +72,11 @@ export default function AppointmentsPage() {
   const [appointmentError, setAppointmentError] =
     useState("");
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [appointmentDetails, setAppointmentDetails] = useState(null);
+
   // =========================================================
   // FORM STATE
   // =========================================================
@@ -82,6 +89,8 @@ export default function AppointmentsPage() {
     mode: "In-person",
     reason: "",
   });
+
+  const [editingAppointmentId, setEditingAppointmentId] = useState(null);
 
   const [message, setMessage] = useState("");
 
@@ -209,39 +218,31 @@ export default function AppointmentsPage() {
 
       const payload = {
         elder_id: Number(selectedElderId),
-
         doctor_name: formData.doctor,
-
         clinic_name: "CareConnect Clinic",
-
-        appointment_at:
-          `${formData.date}T${formData.time}:00`,
-
+        appointment_at: `${formData.date}T${formData.time}:00`,
         reason: formData.reason,
-
         notes: formData.appointmentType,
-
         status: "SCHEDULED",
       };
 
-      console.log(
-        "Creating appointment:",
-        payload
-      );
+      if (editingAppointmentId) {
+        // Update existing appointment
+        await updateAppointment(editingAppointmentId, payload);
 
-      await createAppointment(payload);
+        setMessage("Appointment updated successfully!");
 
-      setMessage(
-        "Appointment booked successfully!"
-      );
+        // Clear editing state
+        setEditingAppointmentId(null);
+      } else {
+        // Create new appointment
+        await createAppointment(payload);
+        setMessage("Appointment booked successfully!");
+      }
 
       // Reload appointments
-      const updatedAppointments =
-        await getAppointments(
-          selectedElderId
-        );
-
-      setAppointments(updatedAppointments);
+      const updatedAppointments = await getAppointments(selectedElderId);
+      setAppointments(Array.isArray(updatedAppointments) ? updatedAppointments : []);
 
       // Reset form
       setFormData({
@@ -253,21 +254,51 @@ export default function AppointmentsPage() {
         reason: "",
       });
 
-      setTimeout(() => {
-        setMessage("");
-      }, 4000);
-
+      setTimeout(() => setMessage(""), 4000);
     } catch (error) {
-      console.error(
-        "Appointment booking failed:",
-        error
-      );
-
-      setAppointmentError(
-        error.message ||
-        "Failed to book appointment."
-      );
+      console.error("Appointment save failed:", error);
+      setAppointmentError(error.message || (editingAppointmentId ? "Failed to update appointment." : "Failed to book appointment."));
     }
+  };
+
+  // =========================================================
+  // EDIT APPOINTMENT
+  // =========================================================
+
+  const handleEdit = (appointment) => {
+    if (!appointment) return;
+
+    // Prefill form with appointment values
+    const dt = new Date(appointment.appointment_at);
+    const date = dt.toISOString().slice(0, 10);
+    const time = dt.toTimeString().slice(0, 5);
+
+    setFormData({
+      doctor: appointment.doctor_name || "",
+      appointmentType: appointment.notes || "General Checkup",
+      date,
+      time,
+      mode: appointment.mode || "In-person",
+      reason: appointment.reason || "",
+    });
+
+    setEditingAppointmentId(appointment.id);
+
+    // Scroll to booking form
+    const el = document.getElementById("book");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const cancelEdit = () => {
+    setEditingAppointmentId(null);
+    setFormData({
+      doctor: "",
+      appointmentType: "General Checkup",
+      date: "",
+      time: "",
+      mode: "In-person",
+      reason: "",
+    });
   };
 
   // =========================================================
@@ -275,46 +306,77 @@ export default function AppointmentsPage() {
   // =========================================================
 
   const handleDelete = async (appointmentId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this appointment?"
-    );
+    // Open modal to confirm deletion
+    setAppointmentError("");
+    setAppointmentToDelete(appointmentId);
+    setShowDeleteModal(true);
+  };
 
-    if (!confirmed) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!appointmentToDelete) return;
 
     try {
       setAppointmentError("");
 
-      await deleteAppointment(
-        appointmentId
-      );
+      await deleteAppointment(appointmentToDelete);
 
-      const updatedAppointments =
-        await getAppointments(
-          selectedElderId
-        );
+      const updatedAppointments = await getAppointments(selectedElderId);
+      setAppointments(Array.isArray(updatedAppointments) ? updatedAppointments : []);
 
-      setAppointments(updatedAppointments);
-
-      setMessage(
-        "Appointment cancelled successfully."
-      );
-
-      setTimeout(() => {
-        setMessage("");
-      }, 4000);
-
+      setMessage("Appointment cancelled successfully.");
+      setTimeout(() => setMessage(""), 4000);
+      setShowDeleteModal(false);
+      setAppointmentToDelete(null);
     } catch (error) {
-      console.error(
-        "Failed to delete appointment:",
-        error
-      );
+      console.error("Failed to delete appointment:", error);
+      setAppointmentError(error.message || "Failed to cancel appointment.");
+    }
+  };
 
-      setAppointmentError(
-        error.message ||
-        "Failed to cancel appointment."
-      );
+  const cancelDelete = () => {
+    setAppointmentError("");
+    setShowDeleteModal(false);
+    setAppointmentToDelete(null);
+  };
+
+  // =========================================================
+  // VIEW DETAILS + MARK COMPLETED
+  // =========================================================
+
+  const viewDetails = (appointment) => {
+    setAppointmentDetails(appointment);
+    setShowDetailsModal(true);
+  };
+
+  const markCompleted = async () => {
+    if (!appointmentDetails) return;
+
+    try {
+      setAppointmentError("");
+
+      const payload = {
+        elder_id: appointmentDetails.elder?.id || appointmentDetails.elder_id,
+        doctor_name: appointmentDetails.doctor_name,
+        clinic_name: appointmentDetails.clinic_name || "CareConnect Clinic",
+        appointment_at: appointmentDetails.appointment_at,
+        reason: appointmentDetails.reason,
+        notes: appointmentDetails.notes,
+        status: "COMPLETED",
+      };
+
+      await updateAppointment(appointmentDetails.id, payload);
+
+      const updatedAppointments = await getAppointments(selectedElderId);
+      setAppointments(Array.isArray(updatedAppointments) ? updatedAppointments : []);
+
+      setMessage("Appointment marked as completed.");
+      setTimeout(() => setMessage(""), 4000);
+
+      setShowDetailsModal(false);
+      setAppointmentDetails(null);
+    } catch (err) {
+      console.error("Failed to mark completed:", err);
+      setAppointmentError(err.message || "Failed to update appointment.");
     }
   };
 
@@ -792,9 +854,19 @@ export default function AppointmentsPage() {
 
               <FaCalendarPlus />
 
-              Book Appointment
+              {editingAppointmentId ? "Save Changes" : "Book Appointment"}
 
             </button>
+
+            {editingAppointmentId && (
+              <button
+                type="button"
+                className="cancel-edit-button"
+                onClick={cancelEdit}
+              >
+                Cancel Edit
+              </button>
+            )}
 
           </form>
 
@@ -1019,19 +1091,24 @@ export default function AppointmentsPage() {
                     <button
                       type="button"
                       title="Edit appointment"
+                      onClick={() => handleEdit(appointment)}
                     >
                       <FaPenToSquare />
                     </button>
 
                     <button
                       type="button"
+                      title="View details"
+                      onClick={() => viewDetails(appointment)}
+                    >
+                      <FaCircleCheck />
+                    </button>
+
+                    <button
+                      type="button"
                       title="Cancel appointment"
                       className="delete"
-                      onClick={() =>
-                        handleDelete(
-                          appointment.id
-                        )
-                      }
+                      onClick={() => handleDelete(appointment.id)}
                     >
                       <FaTrash />
                     </button>
@@ -1142,6 +1219,44 @@ export default function AppointmentsPage() {
         </div>
 
       </section>
+
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div className="small-confirm-modal-backdrop" onClick={cancelDelete}>
+          <div className="small-confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="small-confirm-icon">
+              <FaTriangleExclamation />
+            </div>
+            <h3>Cancel appointment?</h3>
+            <p>Are you sure you want to cancel this appointment? This action cannot be undone.</p>
+            {appointmentError && <div className="appointment-error">{appointmentError}</div>}
+            <div className="small-confirm-actions">
+              <button type="button" className="small-confirm-secondary" onClick={cancelDelete}>Keep</button>
+              <button type="button" className="small-confirm-danger" onClick={confirmDelete}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDetailsModal && appointmentDetails && (
+        <div className="modal-backdrop">
+          <div className="modal-card">
+            <h3>Appointment details</h3>
+            <p><strong>Doctor:</strong> {appointmentDetails.doctor_name}</p>
+            <p><strong>When:</strong> {getFullDate(appointmentDetails.appointment_at)}</p>
+            <p><strong>Reason:</strong> {appointmentDetails.reason}</p>
+            <p><strong>Notes:</strong> {appointmentDetails.notes}</p>
+            <p><strong>Status:</strong> {appointmentDetails.status}</p>
+            {appointmentError && <div className="appointment-error">{appointmentError}</div>}
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => { setShowDetailsModal(false); setAppointmentDetails(null); }}>Close</button>
+              {appointmentDetails.status !== "COMPLETED" && (
+                <button type="button" className="btn-primary" onClick={markCompleted}>Mark completed</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </section>
   );

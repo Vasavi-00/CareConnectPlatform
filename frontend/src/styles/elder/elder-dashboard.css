@@ -718,6 +718,52 @@
   padding: 24px;
 }
 
+.elder-dose-reminder {
+  position: fixed;
+  z-index: 1200;
+  top: 82px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border: 1px solid #f1c66d;
+  border-radius: 16px;
+  background: #fff8e7;
+  box-shadow: 0 12px 32px rgba(25, 43, 70, .18);
+  color: #47320b;
+}
+
+.elder-dose-reminder > div { display: grid; gap: 4px; }
+.elder-dose-reminder span { font-size: 14px; line-height: 1.45; }
+.elder-dose-reminder button,
+.elder-voice-reminder-toggle {
+  border: 0;
+  border-radius: 12px;
+  background: #0b5ed7;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.elder-dose-reminder button { flex-shrink: 0; padding: 12px 16px; }
+.elder-voice-reminder-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 12px 16px;
+}
+.elder-dose-reminder button:hover,
+.elder-voice-reminder-toggle:hover { background: #0846a8; }
+
+@media (max-width: 640px) {
+  .elder-dose-reminder { top: 74px; right: 12px; left: 12px; max-width: none; gap: 10px; padding: 12px; }
+  .elder-dose-reminder span { font-size: 13px; }
+  .elder-dose-reminder button { padding: 10px 12px; }
+}
+
 .elder-card-header {
   display: flex;
   align-items: center;

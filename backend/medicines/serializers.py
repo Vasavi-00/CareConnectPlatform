@@ -16,6 +16,12 @@ class MedicineSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    taken = serializers.BooleanField(
+        write_only=True,
+        required=False,
+        default=False,
+    )
+
     class Meta:
         model = Medicine
 
@@ -41,6 +47,7 @@ class MedicineSerializer(serializers.ModelSerializer):
             "notes",
             "quantity",
             "times",
+            "taken",
         ]
 
         read_only_fields = [
@@ -56,6 +63,24 @@ class MedicineSerializer(serializers.ModelSerializer):
             "email": obj.elder.user.email,
             "careconnect_id": obj.elder.careconnect_id,
         }
+
+    def create(self, validated_data):
+        taken = validated_data.pop("taken", False)
+        medicine = super().create(validated_data)
+
+        if taken:
+            medicine.quantity = max(0, medicine.quantity - 1)
+            medicine.save(update_fields=["quantity"])
+
+        return medicine
+
+    def update(self, instance, validated_data):
+        taken = validated_data.pop("taken", False)
+
+        if taken:
+            validated_data["quantity"] = max(0, instance.quantity - 1)
+
+        return super().update(instance, validated_data)
 
     def validate(self, attrs):
         start_date = attrs.get(

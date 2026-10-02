@@ -88,7 +88,10 @@ export async function takeMedicine(medicineId, currentQuantity) {
   const nextQuantity = Math.max(0, (Number(currentQuantity) || 0) - 1);
   return request(`/medicines/${medicineId}/`, {
     method: "PATCH",
-    body: JSON.stringify({ quantity: nextQuantity }),
+    body: JSON.stringify({
+      taken: true,
+      quantity: nextQuantity,
+    }),
   });
 }
 

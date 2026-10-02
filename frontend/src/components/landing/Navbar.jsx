@@ -100,6 +100,7 @@ function Navbar() {
         {/* Navigation */}
 
         <ul
+          id="landing-navigation"
           className={`nav-menu ${
             menuOpen ? "active" : ""
           }`}
@@ -202,10 +203,11 @@ function Navbar() {
 
         <button
           className="menu-icon"
-          onClick={() =>
-            setMenuOpen(!menuOpen)
-          }
-          aria-label="Toggle navigation"
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={menuOpen}
+          aria-controls="landing-navigation"
         >
 
           {menuOpen

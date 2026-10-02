@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -294,14 +296,121 @@ def create_appointment_cancelled_notification(
     )
 
 
+def create_appointment_reminder_notification(
+    *,
+    recipient,
+    elder,
+    appointment,
+    reminder_minutes=30,
+):
+    """
+    Send a reminder notification to one recipient that an appointment is due soon.
+    """
+
+    appointment_time = appointment.appointment_at.strftime(
+        "%d %b %Y at %I:%M %p"
+    )
+
+    return create_notification(
+        recipient=recipient,
+        elder=elder,
+        notification_type=Notification.NotificationType.APPOINTMENT,
+        title=f"Appointment Reminder: {appointment.doctor_name}",
+        message=(
+            f"Your appointment with {appointment.doctor_name} at "
+            f"{appointment.clinic_name} is scheduled for {appointment_time}. "
+            f"It is due in about {reminder_minutes} minutes."
+        ),
+        priority=Notification.Priority.HIGH,
+        related_object_type="appointment",
+        related_object_id=appointment.id,
+    )
+
+
+def send_appointment_reminder_notifications(appointment):
+    """
+    Trigger a 30-minute reminder for an appointment to both the elder and
+    all active connected family members. This is safe to call repeatedly and
+    will not duplicate notifications for the same appointment.
+    """
+
+    if not appointment or not getattr(appointment, "elder", None):
+        return []
+
+    now = timezone.now()
+
+    if appointment.status in {"CANCELLED", "COMPLETED", "CANCELED"}:
+        return []
+
+    if appointment.appointment_at <= now:
+        return []
+
+    minutes_until = appointment.appointment_at - now
+    if minutes_until > timedelta(minutes=30):
+        return []
+
+    elder = appointment.elder
+    notifications = []
+
+    reminder_title = f"Appointment Reminder: {appointment.doctor_name}"
+
+    elder_key = {
+        "recipient": elder.user,
+        "notification_type": Notification.NotificationType.APPOINTMENT,
+        "title": reminder_title,
+        "related_object_type": "appointment",
+        "related_object_id": appointment.id,
+    }
+    if not Notification.objects.filter(**elder_key, is_read=False).exists():
+        notifications.append(
+            create_appointment_reminder_notification(
+                recipient=elder.user,
+                elder=elder,
+                appointment=appointment,
+            )
+        )
+
+    relationships = (
+        FamilyElderRelationship.objects
+        .select_related("family", "family__user")
+        .filter(elder=elder, is_active=True)
+    )
+
+    for relationship in relationships:
+        family_user = relationship.family.user
+        family_key = {
+            "recipient": family_user,
+            "notification_type": Notification.NotificationType.APPOINTMENT,
+            "title": reminder_title,
+            "related_object_type": "appointment",
+            "related_object_id": appointment.id,
+        }
+        if Notification.objects.filter(**family_key, is_read=False).exists():
+            continue
+
+        notifications.append(
+            create_appointment_reminder_notification(
+                recipient=family_user,
+                elder=elder,
+                appointment=appointment,
+            )
+        )
+
+    return notifications
+
+
 def create_ai_summary_notification(
     *,
     elder,
     summary,
+    chat_history=None,
+    max_message_length=2000,
 ):
     """
-    Send an AI conversation summary
-    to connected family members.
+    Send an AI conversation summary to connected family members.
+
+    If `chat_history` is provided it will be appended to the notification message
+    (truncated to `max_message_length` characters to avoid oversized notifications).
     """
 
     relationships = (
@@ -312,6 +421,15 @@ def create_ai_summary_notification(
             is_active=True,
         )
     )
+
+    # Compose combined message
+    combined = summary or ""
+    if chat_history:
+        combined = combined + "\n\nChat history:\n" + chat_history
+
+    # Truncate to avoid very large notifications
+    if combined and len(combined) > max_message_length:
+        combined = combined[: max_message_length - 3] + "..."
 
     notifications = []
 
@@ -324,7 +442,7 @@ def create_ai_summary_notification(
                     Notification.NotificationType.AI_SUMMARY
                 ),
                 title="AI Companion Summary",
-                message=summary,
+                message=combined,
                 priority=Notification.Priority.NORMAL,
                 related_object_type="ai_summary",
                 related_object_id=None,

@@ -135,7 +135,7 @@ export default function ElderHeader({
       ================================================= */}
       <div className="elder-header-right">
         {/* Notifications Dropdown */}
-        <div className="elder-notification-wrapper" onMouseLeave={() => setShowNotifications(false)}>
+        <div className="elder-notification-wrapper">
           <button
             type="button"
             className="elder-notification-btn"

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 
 from accounts.models import ElderProfile, FamilyProfile
 from .models import Appointment
@@ -75,6 +76,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "appointment_at":
                     "Appointment date and time are required."
+            })
+
+        if appointment_at <= timezone.now():
+            raise serializers.ValidationError({
+                "appointment_at":
+                    "Appointment must be scheduled for a future date and time."
             })
 
         return attrs

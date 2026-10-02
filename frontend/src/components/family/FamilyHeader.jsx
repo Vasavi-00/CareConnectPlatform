@@ -379,7 +379,6 @@ export default function FamilyHeader({
 
         <div
           className="notification-wrapper"
-          onMouseLeave={() => setShowNotifications(false)}
         >
 
           <button

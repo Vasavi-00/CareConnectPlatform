@@ -13,6 +13,22 @@ import {
 import { takeMedicine } from "../../services/api/elderApi";
 import { speakText } from "../../services/voice/speechSynthesis";
 
+const getMedicineTimes = (medicine) => {
+  const values = Array.isArray(medicine?.times) ? medicine.times : [];
+  const times = values
+    .map((value) => {
+      if (typeof value === "string") {
+        return value.match(/\b\d{1,2}:\d{2}\b/)?.[0] || "";
+      }
+      return value?.time || "";
+    })
+    .filter(Boolean);
+
+  if (times.length) return times.join(", ");
+
+  return String(medicine?.timing || "").match(/\b\d{1,2}:\d{2}\b/g)?.join(", ") || "";
+};
+
 export default function ElderMedicinesPage({
   medicines = [],
   profile,
@@ -72,13 +88,13 @@ export default function ElderMedicinesPage({
   const handleHearReminder = (medicine) => {
     const speechMsg = isTelugu
       ? `మందు పేరు: ${medicine.name}. మోతాదు: ${medicine.dosage}. సమయం: ${
-          Array.isArray(medicine.times) && medicine.times.length
-            ? medicine.times.join(", ")
+          getMedicineTimes(medicine)
+            ? getMedicineTimes(medicine)
             : "నిర్ణయించబడిన సమయం"
         }. ${medicine.food_timing || ""}.`
       : `Medicine: ${medicine.name}. Dosage: ${medicine.dosage}. Scheduled for ${
-          Array.isArray(medicine.times) && medicine.times.length
-            ? medicine.times.join(", ")
+          getMedicineTimes(medicine)
+            ? getMedicineTimes(medicine)
             : "scheduled time"
         }. ${medicine.food_timing || "Please take with water"}.`;
 
@@ -154,8 +170,8 @@ export default function ElderMedicinesPage({
                     <div>
                       <small>Schedule Times</small>
                       <strong>
-                        {Array.isArray(med.times) && med.times.length
-                          ? med.times.join(", ")
+                        {getMedicineTimes(med)
+                          ? getMedicineTimes(med)
                           : "Scheduled Time"}
                       </strong>
                     </div>

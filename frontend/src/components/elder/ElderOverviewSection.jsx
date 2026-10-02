@@ -77,6 +77,21 @@ export default function ElderOverviewSection({
 
   // Helpers
   const nextMedicine = medicines.length > 0 ? medicines[0] : null;
+  const getMedicineTimes = (medicine) => {
+    const values = Array.isArray(medicine?.times) ? medicine.times : [];
+    const times = values
+      .map((value) => {
+        if (typeof value === "string") {
+          return value.match(/\b\d{1,2}:\d{2}\b/)?.[0] || "";
+        }
+        return value?.time || "";
+      })
+      .filter(Boolean);
+
+    if (times.length) return times.join(", ");
+
+    return String(medicine?.timing || "").match(/\b\d{1,2}:\d{2}\b/g)?.join(", ") || "";
+  };
 
   const upcomingAppointments = appointments
     .filter((a) => {
@@ -180,8 +195,8 @@ export default function ElderOverviewSection({
       ) {
         reply = nextMedicine
           ? `మీ తదుపరి మందు ${nextMedicine.name} (${nextMedicine.dosage}). సమయం: ${
-              Array.isArray(nextMedicine.times) && nextMedicine.times.length
-                ? nextMedicine.times[0]
+              getMedicineTimes(nextMedicine)
+                ? getMedicineTimes(nextMedicine).split(", ")[0]
                 : "నిర్ణయించబడిన సమయం"
             }. ${nextMedicine.food_timing || ""}.`
           : "ప్రస్తుతం మీకు ఎలాంటి షెడ్యూల్డ్ మందులు లేవు.";
@@ -229,8 +244,8 @@ export default function ElderOverviewSection({
       ) {
         reply = nextMedicine
           ? `Your next medicine is ${nextMedicine.name} (${nextMedicine.dosage}) scheduled for ${
-              Array.isArray(nextMedicine.times) && nextMedicine.times.length
-                ? nextMedicine.times[0]
+              getMedicineTimes(nextMedicine)
+                ? getMedicineTimes(nextMedicine).split(", ")[0]
                 : "your regular time"
             } (${nextMedicine.food_timing || "with water"}).`
           : "You do not have any pending medicines scheduled right now.";
@@ -397,8 +412,8 @@ export default function ElderOverviewSection({
             <small className="summary-sub">
               {nextMedicine
                 ? `${nextMedicine.dosage || ""} • ${
-                    Array.isArray(nextMedicine.times) && nextMedicine.times.length
-                      ? nextMedicine.times[0]
+                    getMedicineTimes(nextMedicine)
+                      ? getMedicineTimes(nextMedicine).split(", ")[0]
                       : "Today"
                   }`
                 : "All clear for now"}
@@ -523,8 +538,8 @@ export default function ElderOverviewSection({
                         </div>
                         <p className="med-dosage-timing">
                           {med.dosage} •{" "}
-                          {Array.isArray(med.times) && med.times.length
-                            ? med.times.join(", ")
+                          {getMedicineTimes(med)
+                            ? getMedicineTimes(med)
                             : "Scheduled"}{" "}
                           • {med.food_timing || "Any time"}
                         </p>

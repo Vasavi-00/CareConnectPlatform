@@ -26,6 +26,12 @@ import {
 
 import "../../styles/family/AppointmentsPage.css";
 
+const getLocalDateInputValue = (date = new Date()) => {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+};
+
 export default function AppointmentsPage() {
   const location = useLocation();
 
@@ -212,6 +218,15 @@ export default function AppointmentsPage() {
       return;
     }
 
+    const appointmentDate = new Date(
+      `${formData.date}T${formData.time}:00`
+    );
+
+    if (Number.isNaN(appointmentDate.getTime()) || appointmentDate <= new Date()) {
+      setMessage("Please select a future appointment date and time.");
+      return;
+    }
+
     try {
       setMessage("");
       setAppointmentError("");
@@ -220,7 +235,7 @@ export default function AppointmentsPage() {
         elder_id: Number(selectedElderId),
         doctor_name: formData.doctor,
         clinic_name: "CareConnect Clinic",
-        appointment_at: `${formData.date}T${formData.time}:00`,
+        appointment_at: appointmentDate.toISOString(),
         reason: formData.reason,
         notes: formData.appointmentType,
         status: "SCHEDULED",
@@ -270,7 +285,7 @@ export default function AppointmentsPage() {
 
     // Prefill form with appointment values
     const dt = new Date(appointment.appointment_at);
-    const date = dt.toISOString().slice(0, 10);
+    const date = getLocalDateInputValue(dt);
     const time = dt.toTimeString().slice(0, 5);
 
     setFormData({
@@ -695,6 +710,7 @@ export default function AppointmentsPage() {
                 type="date"
                 name="date"
                 value={formData.date}
+                min={getLocalDateInputValue()}
                 onChange={handleChange}
                 required
               />

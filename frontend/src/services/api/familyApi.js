@@ -18,13 +18,44 @@ async function request(endpoint, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(
+  let response = await fetch(
     `${API_BASE_URL}${endpoint}`,
     {
       ...options,
       headers,
     }
   );
+
+  if (response.status === 401 && !endpoint.includes("/auth/refresh/")) {
+    const refreshToken = localStorage.getItem("careconnect_refresh");
+
+    if (refreshToken) {
+      const refreshResponse = await fetch(
+        `${API_BASE_URL}/auth/refresh/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh: refreshToken }),
+        }
+      );
+
+      if (refreshResponse.ok) {
+        const refreshedTokens = await refreshResponse.json();
+        localStorage.setItem("careconnect_access", refreshedTokens.access);
+
+        response = await fetch(
+          `${API_BASE_URL}${endpoint}`,
+          {
+            ...options,
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${refreshedTokens.access}`,
+            },
+          }
+        );
+      }
+    }
+  }
 
   let data = null;
 

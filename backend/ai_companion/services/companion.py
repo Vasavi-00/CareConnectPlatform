@@ -9,6 +9,61 @@ from notifications.models import Notification
 from ..models import AIConversation, AIMessage, FamilyCallRequest
 
 
+def _classify_message(message, previous_user_message=""):
+    lower = (message or "").strip().lower()
+
+    emergency_terms = (
+        "chest pain", "chest pressure", "chest tightness", "chest feels tight",
+        "chest tight", "can't breathe",
+        "cannot breathe", "trouble breathing", "shortness of breath",
+        "severe pain", "bleeding", "unconscious", "stroke", "fell",
+        "fall", "emergency",
+    )
+    emergency_terms_te = ("నొప్పి", "పడిపోయా", "పడిపోయాను", "ఊపిరి", "గుండె నొప్పి", "ప్రమాదం", "రక్తం", "స్పృహ")
+    if any(term in lower for term in emergency_terms) or any(term in message for term in emergency_terms_te):
+        return "emergency"
+
+    medicine_terms = (
+        "medicine", "medicines", "medication", "medications", "tablet",
+        "tablets", "pill", "pills", "dose", "dosage", "prescription",
+        "మందు", "మందులు", "టాబ్లెట్", "టాబ్లెట్లు",
+    )
+    appointment_terms = (
+        "appointment", "doctor", "clinic", "hospital", "visit", "checkup",
+        "డాక్టర్", "అపాయింట్‌మెంట్", "ఆసుపత్రి", "హాస్పిటల్",
+    )
+
+    if any(term in lower for term in medicine_terms):
+        return "medicine"
+    if any(term in lower for term in appointment_terms):
+        return "appointment"
+
+    follow_up = any(
+        phrase in lower
+        for phrase in ("what time", "when is it", "and when", "what date", "which one", "tell me more", "what about")
+    )
+    if follow_up and len(lower.split()) <= 8:
+        previous = (previous_user_message or "").lower()
+        if any(term in previous for term in medicine_terms):
+            return "medicine"
+        if any(term in previous for term in appointment_terms):
+            return "appointment"
+
+    if any(term in lower for term in ("call my family", "call my son", "call my daughter", "talk to my family", "family call")):
+        return "family_call"
+    if any(term in lower for term in ("lonely", "alone", "sad", "missing my", "miss my", "depressed", "nobody to talk", "ఒంటరి", "బాధ", "జ్ఞాపకం", "ఎవరూ లేరు")):
+        return "lonely"
+    if any(term in lower for term in ("anxious", "anxiety", "worried", "scared", "afraid", "nervous", "overwhelmed", "stressed", "భయం", "ఆందోళన")):
+        return "emotional_support"
+    if any(term in lower for term in ("hello", "hi", "hey", "namaste", "good morning", "good evening", "good afternoon", "నమస్కారం", "బాగున్నారా")):
+        return "greeting"
+    if any(term in lower for term in ("thank", "thanks", "ధన్యవాదాలు")):
+        return "gratitude"
+    if any(term in lower for term in ("who are you", "what can you do", "how can you help")):
+        return "capabilities"
+    return "general"
+
+
 def get_or_create_active_conversation(elder):
     """
     Get the latest conversation for this elder from today,
@@ -41,6 +96,13 @@ def process_elder_message(elder, message_text, language="English"):
         }
 
     conv = get_or_create_active_conversation(elder)
+    previous_user_message = (
+        conv.messages.filter(sender="elder")
+        .order_by("-created_at")
+        .values_list("content", flat=True)
+        .first()
+        or ""
+    )
 
     # 1. Save elder's incoming message
     AIMessage.objects.create(
@@ -59,6 +121,7 @@ def process_elder_message(elder, message_text, language="English"):
         elder.user.first_name.strip()
         or elder.user.email.split("@")[0].capitalize()
     )
+    intent = _classify_message(text, previous_user_message)
 
     # Fetch elder's care data
     active_medicines = list(Medicine.objects.filter(elder=elder, is_active=True))
@@ -76,10 +139,7 @@ def process_elder_message(elder, message_text, language="English"):
     offer_family_call = False
 
     # Check emergency keywords
-    emergency_keywords_en = ["fall", "fell", "chest pain", "can't breathe", "cannot breathe", "severe pain", "bleeding", "unconscious", "emergency"]
-    emergency_keywords_te = ["నొప్పి", "పడిపోయా", "పడిపోయాను", "ఊపిరి", "గుండె నొప్పి", "ప్రమాదం", "రక్తం", "స్పృహ"]
-
-    if any(k in lower for k in emergency_keywords_en) or any(k in text for k in emergency_keywords_te):
+    if intent == "emergency":
         offer_sos = True
         if is_telugu:
             reply = (
@@ -93,7 +153,7 @@ def process_elder_message(elder, message_text, language="English"):
             )
 
     # Check emotional / loneliness keywords
-    elif any(k in lower for k in ["lonely", "alone", "sad", "miss my", "missing my", "depressed", "nobody to talk"]) or any(k in text for k in ["ఒంటరి", "బాధ", "బాధగా", "జ్ఞాపకం", "ఎవరూ లేరు", "కుటుంబం"]):
+    elif intent == "lonely":
         offer_family_call = True
         if is_telugu:
             reply = (
@@ -116,7 +176,7 @@ def process_elder_message(elder, message_text, language="English"):
             pass
 
     # Check medicine queries
-    elif any(k in lower for k in ["medicine", "medicines", "tablet", "tablets", "pill", "pills", "dose", "dosage", "prescription"]) or any(k in text for k in ["మందు", "మందులు", "టాబ్లెట్", "టాబ్లెట్లు"]):
+    elif intent == "medicine":
         if not active_medicines:
             if is_telugu:
                 reply = "ప్రస్తుతం మీకు ఎలాంటి క్రియాశీల మందుల షెడ్యూల్ నమోదు కాలేదు."
@@ -136,7 +196,7 @@ def process_elder_message(elder, message_text, language="English"):
                 reply = f"Here are your scheduled medicines, {elder_name}: {joined_meds}. Remember to take them on time with a glass of water."
 
     # Check appointment queries
-    elif any(k in lower for k in ["appointment", "doctor", "clinic", "hospital", "visit", "checkup"]) or any(k in text for k in ["డాక్టర్", "అపాయింట్‌మెంట్", "ఆసుపత్రి", "హాస్పిటల్"]):
+    elif intent == "appointment":
         if not upcoming_appointments:
             if is_telugu:
                 reply = "రాబోయే రోజుల్లో మీకు ఎలాంటి డాక్టర్ అపాయింట్‌మెంట్‌లు షెడ్యూల్ చేయబడలేదు."
@@ -150,23 +210,44 @@ def process_elder_message(elder, message_text, language="English"):
             else:
                 reply = f"Your next appointment is with Dr. {next_app.doctor_name} at {next_app.clinic_name} on {appt_time_str}."
 
+    elif intent == "family_call":
+        offer_family_call = True
+        reply = (
+            f"మీ కుటుంబ సభ్యులకు కాల్ చేయమని అభ్యర్థించడంలో నేను సహాయం చేయగలను, {elder_name} గారు."
+            if is_telugu
+            else f"I can help ask your family to call you, {elder_name}. Would you like me to send them a call request?"
+        )
+
+    elif intent == "emotional_support":
+        reply = (
+            f"మీరు ఆందోళనగా ఉన్నారని వింటున్నాను, {elder_name} గారు. ఏమి మిమ్మల్ని ఎక్కువగా కలవరపెడుతోంది? మనం ఒక్కొక్కటిగా మాట్లాడుకుందాం."
+            if is_telugu
+            else f"I hear that you are feeling worried, {elder_name}. What is troubling you most right now? We can take it one step at a time."
+        )
+
     # General greetings and conversations
     else:
-        if any(k in lower for k in ["hello", "hi", "hey", "namaste", "good morning", "good evening", "good afternoon"]) or any(k in text for k in ["నమస్కారం", "బాగున్నారా"]):
+        if intent == "greeting":
             if is_telugu:
                 reply = f"నమస్కారం {elder_name} గారు! ఈ రోజు మీ ఆరోగ్యం ఎలా ఉంది? మీకు సహాయం చేయడానికి నేను ఎల్లప్పుడూ సిద్ధంగా ఉన్నాను."
             else:
                 reply = f"Hello {elder_name}! It is wonderful to hear from you today. How are you feeling? I can help you check your medicines, appointments, or just chat."
-        elif any(k in lower for k in ["thank", "thanks", "dhanyavadamulu"]) or "ధన్యవాదాలు" in text:
+        elif intent == "gratitude":
             if is_telugu:
                 reply = "మీకు స్వాగతం! ఆరోగ్యాన్ని జాగ్రత్తగా చూసుకోండి."
             else:
                 reply = f"You are most welcome, {elder_name}! Take good care of yourself today."
+        elif intent == "capabilities":
+            reply = (
+                f"నేను మీ మందుల షెడ్యూల్, రాబోయే డాక్టర్ అపాయింట్‌మెంట్‌లు, కుటుంబంతో మాట్లాడటం, లేదా మీకు ఎలా అనిపిస్తుందో గురించి సహాయం చేయగలను, {elder_name} గారు."
+                if is_telugu
+                else f"I can check the medicine schedule and upcoming appointments saved in CareConnect, help you contact your family, or listen if something is on your mind, {elder_name}. What would you like to do?"
+            )
         else:
             if is_telugu:
-                reply = f"నేను విన్నాను, {elder_name} గారు. మీకు మీ మందులు లేదా డాక్టర్ అపాయింట్‌మెంట్‌ల గురించి ఏమైనా సమాచారం కావాలా? నేను సహాయం చేయగలను."
+                reply = f"మీరు చెప్పింది విన్నాను, {elder_name} గారు. దాని గురించి కొంచెం వివరంగా చెబుతారా? మీ మందుల షెడ్యూల్, డాక్టర్ అపాయింట్‌మెంట్‌లు, లేదా కుటుంబంతో మాట్లాడటంలో నేను సహాయం చేయగలను."
             else:
-                reply = f"Thank you for sharing that with me, {elder_name}. If you need to check your medicines, upcoming appointments, or contact your family, just let me know!"
+                reply = f"Thanks for telling me, {elder_name}. Could you say a little more about what you need? I can check your saved medicine schedule or upcoming appointments, help you contact family, or talk through a general question. I cannot diagnose symptoms or change a prescription."
 
     # 2. Save AI reply
     AIMessage.objects.create(

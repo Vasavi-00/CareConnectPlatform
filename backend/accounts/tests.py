@@ -1,8 +1,29 @@
+from unittest.mock import patch
+
 from django.urls import reverse
+from django.test import SimpleTestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import ElderProfile, FamilyElderRelationship, FamilyProfile, User
+
+
+class TokenRefreshEndpointTests(SimpleTestCase):
+	@patch("rest_framework_simplejwt.serializers.get_user_model")
+	def test_refresh_token_returns_new_access_token(self, get_user_model):
+		user = User(pk=123)
+		refresh_token = str(RefreshToken.for_user(user))
+		get_user_model.return_value.objects.get.return_value = user
+
+		response = self.client.post(
+			reverse("token-refresh"),
+			{"refresh": refresh_token},
+			content_type="application/json",
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertIn("access", response.json())
 
 
 class AccountDeletionTests(APITestCase):

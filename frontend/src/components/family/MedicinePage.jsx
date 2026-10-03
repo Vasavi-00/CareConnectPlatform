@@ -22,6 +22,31 @@ import {
 import { createMedicine, deleteMedicine as removeMedicine, getMedicines, updateMedicine } from "../../services/api/familyApi";
 import "../../styles/family/MedicinePage.css";
 
+const getMedicineStock = (item) => {
+  const rawValue = item?.quantity ?? item?.stock ?? item?.available_quantity ?? item?.remaining_quantity ?? item?.stock_count;
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getMedicineLowStockThreshold = (item) => {
+  const rawValue = item?.low_stock_threshold ?? item?.refill_threshold ?? item?.lowStockThreshold ?? 5;
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : 5;
+};
+
+const normalizeMedicineRow = (item) => {
+  const stock = getMedicineStock(item);
+  const threshold = getMedicineLowStockThreshold(item);
+
+  return {
+    ...item,
+    stock,
+    unit: item?.unit || "units",
+    schedule: [item?.frequency, item?.timing].filter(Boolean).join(" · ") || "As prescribed",
+    status: stock <= threshold ? "Low Stock" : "Good",
+  };
+};
+
 export default function MedicinePage({ selectedElder }) {
   const canManageMedicines = selectedElder?.can_manage_medicines !== false;
   const [showAddMedicine, setShowAddMedicine] = useState(false);
@@ -46,13 +71,7 @@ export default function MedicinePage({ selectedElder }) {
     setLoading(true);
     setError("");
     getMedicines(elderId)
-      .then((rows) => { if (active) setMedicines(rows.map((item) => ({
-        ...item,
-        stock: Number(item.quantity || 0),
-        unit: "units",
-        schedule: [item.frequency, item.timing].filter(Boolean).join(" · ") || "As prescribed",
-        status: Number(item.quantity || 0) <= Number(item.low_stock_threshold || 5) ? "Low Stock" : "Good",
-      }))); })
+      .then((rows) => { if (active) setMedicines(rows.map(normalizeMedicineRow)); })
       .catch((err) => { if (active) setError(err.message || "Unable to load medicines."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -207,8 +226,8 @@ export default function MedicinePage({ selectedElder }) {
       timing: medicine?.timing || "Morning",
       time: medicine?.times?.[0]?.match(/\d{1,2}:\d{2}/)?.[0] || "08:00",
       foodTiming: medicine?.food_timing || medicine?.foodTiming || "After Food",
-      stock: medicine?.quantity ?? medicine?.stock ?? "",
-      lowStockThreshold: medicine?.low_stock_threshold ?? medicine?.lowStockThreshold ?? "5",
+      stock: medicine?.quantity ?? medicine?.stock ?? medicine?.available_quantity ?? medicine?.remaining_quantity ?? "",
+      lowStockThreshold: medicine?.low_stock_threshold ?? medicine?.refill_threshold ?? medicine?.lowStockThreshold ?? "5",
       startDate: medicine?.start_date || new Date().toISOString().slice(0, 10),
       endDate: medicine?.end_date || "",
       prescribedBy: medicine?.prescribed_by || "",
@@ -298,13 +317,7 @@ export default function MedicinePage({ selectedElder }) {
       }
 
       const refreshed = await getMedicines(elderId);
-      setMedicines(refreshed.map((item) => ({
-        ...item,
-        stock: Number(item.quantity || 0),
-        unit: "units",
-        schedule: [item.frequency, item.timing].filter(Boolean).join(" · ") || "As prescribed",
-        status: Number(item.quantity || 0) <= Number(item.low_stock_threshold || 5) ? "Low Stock" : "Good",
-      })));
+      setMedicines(refreshed.map(normalizeMedicineRow));
 
       closeMedicineForm();
     } catch (err) { setError(err.message || "Unable to add medicine."); }

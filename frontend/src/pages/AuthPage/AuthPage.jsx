@@ -19,6 +19,10 @@ import { FaCircleCheck } from "react-icons/fa6";
 import { FaXmark } from "react-icons/fa6";
 import "../../styles/AuthPage/auth.css";
 
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://127.0.0.1:8000/api";
+
 
 /* =========================================================
    BLANK SIGNUP FORM
@@ -193,7 +197,7 @@ function AuthPage({ mode }) {
             ================================================= */
 
             const response = await fetch(
-                `/api/auth/${isLogin ? "login" : "signup"}/`,
+                `${API_BASE_URL}/auth/${isLogin ? "login" : "signup"}/`,
                 {
                     method: "POST",
 

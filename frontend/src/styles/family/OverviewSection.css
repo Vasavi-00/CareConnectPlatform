@@ -1590,11 +1590,46 @@
 .appointment-info span { margin-top: 3px; color: #7a899b; font-size: 11px; }
 .appointment-status { color: #1769d5; font-size: 11px; font-weight: 700; }
 
-.ai-summary-content { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
-.ai-summary-message { display: flex; align-items: flex-start; gap: 12px; color: #1769d5; }
+.ai-summary-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ai-summary-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 18px;
+}
+.ai-summary-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #1769d5;
+}
+.ai-summary-message > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
 .ai-summary-message > svg { flex: 0 0 auto; margin-top: 3px; }
 .ai-summary-message strong { color: #263e5a; font-size: 13px; }
-.ai-summary-message p { max-width: 650px; margin: 5px 0 0; color: #718197; font-size: 12px; line-height: 1.6; }
+.ai-summary-message p {
+  max-width: 100%;
+  margin: 5px 0 0;
+  color: #718197;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ai-summary-content > button {
+  flex: 0 0 auto;
+  align-self: center;
+  white-space: nowrap;
+}
 
 .overview-quick-actions { padding: 22px; border: 1px solid #e3eaf3; border-radius: 18px; background: #fff; box-shadow: 0 5px 18px rgba(35, 67, 109, .05); }
 .quick-actions-heading { margin-bottom: 15px; }
@@ -1634,5 +1669,16 @@
   .medicine-stock-summary { gap: 14px; }
   .stock-total { min-width: 90px; }
   .quick-actions-grid { grid-template-columns: 1fr; }
-  .ai-summary-content { align-items: flex-start; flex-direction: column; }
+  .ai-summary-content {
+    align-items: flex-start;
+    flex-direction: column;
+    width: 100%;
+  }
+  .ai-summary-message,
+  .ai-summary-content > button {
+    width: 100%;
+  }
+  .ai-summary-content > button {
+    justify-content: center;
+  }
 }

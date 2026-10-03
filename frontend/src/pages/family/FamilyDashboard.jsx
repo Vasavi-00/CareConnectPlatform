@@ -26,7 +26,7 @@ import {
 import "../../styles/family/FamilyDashboard.css";
 
 export default function FamilyDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [user, setUser] = useState(null);
   const [familyProfile, setFamilyProfile] = useState(null);
@@ -55,6 +55,20 @@ export default function FamilyDashboard() {
       connectedElders.find((elder) => elder.elder_id === current?.elder_id) || connectedElders[0] || null
     );
   };
+
+  useEffect(() => {
+  const handleResize = () => {
+    setSidebarOpen(window.innerWidth > 800);
+  };
+
+  handleResize();
+
+  window.addEventListener("resize", handleResize);
+
+  return () => {
+    window.removeEventListener("resize", handleResize);
+  };
+}, []);
 
   // =========================================================
   // LOAD FAMILY DASHBOARD DATA

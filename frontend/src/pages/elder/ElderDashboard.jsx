@@ -34,7 +34,7 @@ import {
 import "../../styles/elder/elder-dashboard.css";
 
 export default function ElderDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -129,6 +129,19 @@ export default function ElderDashboard() {
 
   useEffect(() => {
     loadDashboardData();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth > 800);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   // Check the schedule while the elder dashboard is open. Speech starts only

@@ -1,6 +1,6 @@
 /* =========================================================
    FAMILY DASHBOARD
-========================================================= */
+   ========================================================= */
 
 .dashboard {
   width: 100%;
@@ -13,18 +13,23 @@
   background: #f5f8fc;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 /* =========================================================
    HEADER
-========================================================= */
+   ========================================================= */
 
 .dashboard > header {
   flex: 0 0 auto;
   z-index: 1000;
 }
 
+
 /* =========================================================
    BODY
-========================================================= */
+   ========================================================= */
 
 .dashboard-body {
   flex: 1;
@@ -32,11 +37,14 @@
 
   display: flex;
   overflow: hidden;
+
+  width: 100%;
 }
+
 
 /* =========================================================
    SIDEBAR
-========================================================= */
+   ========================================================= */
 
 .dashboard-body > aside {
   flex: 0 0 auto;
@@ -47,15 +55,17 @@
   z-index: 900;
 }
 
+
 /* =========================================================
    MAIN CONTENT
-========================================================= */
+   ========================================================= */
 
 .main {
   flex: 1;
   min-width: 0;
   min-height: 0;
 
+  width: 100%;
   height: 100%;
 
   overflow-y: auto;
@@ -66,7 +76,9 @@
   scroll-behavior: smooth;
 }
 
+
 /* Keep scrollbar inside main content */
+
 .main::-webkit-scrollbar {
   width: 8px;
 }
@@ -84,9 +96,10 @@
   background: #9eb5d2;
 }
 
+
 /* =========================================================
    LOADING
-========================================================= */
+   ========================================================= */
 
 .family-dashboard-loading {
   width: 100%;
@@ -137,9 +150,10 @@
   }
 }
 
+
 /* =========================================================
    ERROR
-========================================================= */
+   ========================================================= */
 
 .family-dashboard-error {
   width: 100%;
@@ -187,3 +201,1068 @@
   cursor: pointer;
 }
 
+
+/* =========================================================
+   GLOBAL RESPONSIVE HELPERS
+   ========================================================= */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .dashboard {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dashboard-body {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .family-content {
+    width: 100%;
+    max-width: 100%;
+
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .family-page-top {
+    width: 100%;
+    max-width: 100%;
+
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .family-page-card {
+    width: calc(100% - 48px);
+    max-width: none;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   MOBILE — 800px AND BELOW
+   ========================================================= */
+
+@media (max-width: 800px) {
+
+  /* -------------------------------------------------------
+     DASHBOARD ROOT
+     ------------------------------------------------------- */
+
+  .dashboard {
+    width: 100%;
+    max-width: 100%;
+
+    height: 100vh;
+
+    overflow: hidden;
+  }
+
+
+  /* -------------------------------------------------------
+     MOBILE DASHBOARD BODY
+
+     Desktop:
+       sidebar + main side by side
+
+     Mobile:
+       main takes entire width
+       sidebar becomes overlay
+     ------------------------------------------------------- */
+
+  .dashboard-body {
+    display: block !important;
+
+    position: relative;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    min-height: 0;
+
+    overflow: hidden !important;
+  }
+
+
+  /* -------------------------------------------------------
+     MOBILE SIDEBAR
+     ------------------------------------------------------- */
+
+  .dashboard-body > aside {
+    position: fixed !important;
+
+    top: 68px;
+    left: 0;
+
+    width: 280px !important;
+    max-width: 85vw;
+
+    height: calc(100vh - 68px);
+
+    z-index: 2000;
+
+    flex: none !important;
+
+    transform: translateX(-100%);
+
+    transition:
+      transform 0.25s ease,
+      visibility 0.25s ease;
+
+    visibility: hidden;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    box-shadow:
+      8px 0 25px rgba(15, 23, 42, 0.18);
+  }
+
+
+  /* When sidebar is open */
+
+  .dashboard-body > aside.open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+
+  /* When sidebar is closed */
+
+  .dashboard-body > aside.closed {
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+
+
+  /* Support either class naming convention */
+
+  .family-sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .family-sidebar.closed {
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+
+
+  /* -------------------------------------------------------
+     MAIN CONTENT — FULL WIDTH
+     ------------------------------------------------------- */
+
+  .main {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0 !important;
+
+    height: 100%;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+
+  /* -------------------------------------------------------
+     HEADER
+     ------------------------------------------------------- */
+
+  .family-header {
+    width: 100%;
+
+    min-height: 68px;
+    height: 68px;
+
+    padding: 10px 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 8px;
+
+    overflow: hidden;
+  }
+
+  .family-header h1 {
+    font-size: 20px;
+    line-height: 1.2;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+  }
+
+
+  /* -------------------------------------------------------
+     MAIN FAMILY CONTENT
+     ------------------------------------------------------- */
+
+  .family-content {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    margin: 0 !important;
+
+    padding:
+      20px
+      14px
+      40px !important;
+
+    overflow-x: hidden;
+  }
+
+
+  /* -------------------------------------------------------
+     WELCOME CARD
+     ------------------------------------------------------- */
+
+  .welcome-card {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+    min-height: auto;
+
+    padding: 25px 20px;
+
+    display: block;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+  }
+
+  .welcome-card h2 {
+    max-width: 100%;
+
+    font-size: 27px;
+    line-height: 1.2;
+
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .welcome-card p {
+    max-width: 100%;
+
+    font-size: 14px;
+    line-height: 1.55;
+
+    overflow-wrap: anywhere;
+  }
+
+  .welcome-decoration {
+    display: none;
+  }
+
+
+  /* -------------------------------------------------------
+     ELDER SELECTOR
+     ------------------------------------------------------- */
+
+  .elder-selector-card {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    margin-top: 16px;
+
+    padding: 16px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 14px;
+  }
+
+  .elder-selector-left {
+    min-width: 0;
+  }
+
+  .elder-select-wrapper,
+  .elder-select-wrapper select {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+  }
+
+
+  /* -------------------------------------------------------
+     SECTION HEADINGS
+     ------------------------------------------------------- */
+
+  .dashboard-section-heading {
+    margin: 25px 0 14px;
+
+    max-width: 100%;
+  }
+
+  .dashboard-section-heading h2 {
+    max-width: 100%;
+
+    margin: 4px 0 0;
+
+    font-size: 20px;
+    line-height: 1.25;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* -------------------------------------------------------
+     STATISTICS
+     ------------------------------------------------------- */
+
+  .stats-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    display: grid;
+
+    grid-template-columns: 1fr !important;
+
+    gap: 12px;
+  }
+
+  .family-stat-card {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    padding: 16px;
+  }
+
+  .stat-content {
+    min-width: 0;
+  }
+
+  .stat-content strong,
+  .stat-content span,
+  .stat-content small {
+    max-width: 100%;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* -------------------------------------------------------
+     DASHBOARD PANELS
+     ------------------------------------------------------- */
+
+  .dashboard-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    display: grid;
+
+    grid-template-columns: 1fr !important;
+
+    gap: 14px;
+  }
+
+  .dashboard-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    padding: 18px !important;
+
+    overflow: hidden;
+  }
+
+  .panel-header {
+    width: 100%;
+
+    align-items: flex-start;
+
+    gap: 10px;
+  }
+
+  .panel-header h3 {
+    max-width: 100%;
+
+    font-size: 18px;
+    line-height: 1.3;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* -------------------------------------------------------
+     ALL PAGE CARDS
+     ------------------------------------------------------- */
+
+  .family-page-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    margin:
+      0
+      0
+      20px
+      0 !important;
+
+    padding: 18px !important;
+
+    overflow: hidden;
+  }
+
+  .family-page-card h1,
+  .family-page-card h2,
+  .family-page-card h3 {
+    max-width: 100%;
+
+    line-height: 1.25;
+
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+
+  /* -------------------------------------------------------
+     PAGE HEADER
+     ------------------------------------------------------- */
+
+  .family-page-top {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+
+    padding:
+      22px
+      14px
+      16px !important;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 10px;
+  }
+
+  .family-page-top h1 {
+    max-width: 100%;
+
+    font-size: 25px;
+    line-height: 1.25;
+
+    overflow-wrap: anywhere;
+  }
+
+  .family-page-top p {
+    max-width: 100%;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* -------------------------------------------------------
+     ELDER BAR
+     ------------------------------------------------------- */
+
+  .simple-elder-bar {
+    width: 100%;
+    max-width: 100%;
+
+    margin: 0;
+
+    padding:
+      10px
+      14px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 8px;
+  }
+
+  .simple-elder-bar select {
+    width: 100%;
+    max-width: 100%;
+  }
+
+
+  /* -------------------------------------------------------
+     MEDICINE / APPOINTMENT / CONTACT ROWS
+     ------------------------------------------------------- */
+
+  .medicine-row,
+  .appointment-row,
+  .contact-row {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    padding: 15px 0;
+  }
+
+  .medicine-main {
+    width: 100%;
+
+    min-width: 0;
+
+    flex: none;
+  }
+
+  .appointment-details,
+  .contact-details {
+    min-width: 0;
+
+    width: calc(100% - 55px);
+
+    max-width: 100%;
+  }
+
+  .medicine-row > *,
+  .appointment-row > *,
+  .contact-row > * {
+    max-width: 100%;
+  }
+
+  .row-actions {
+    width: 100%;
+
+    display: flex;
+
+    justify-content: flex-start;
+
+    gap: 7px;
+  }
+
+
+  /* -------------------------------------------------------
+     PROFILE
+     ------------------------------------------------------- */
+
+  .profile-hero-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0;
+
+    margin:
+      10px
+      0
+      20px !important;
+
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    overflow: hidden;
+  }
+
+  .profile-hero-card h2,
+  .profile-hero-card p {
+    max-width: 100%;
+
+    overflow-wrap: anywhere;
+  }
+
+  .profile-details-grid {
+    width: 100%;
+    max-width: 100%;
+
+    grid-template-columns: 1fr !important;
+
+    gap: 12px;
+  }
+
+  .profile-item {
+    width: 100%;
+
+    min-width: 0;
+  }
+
+
+  /* -------------------------------------------------------
+     FORMS
+     ------------------------------------------------------- */
+
+  .form-grid {
+    width: 100%;
+
+    grid-template-columns: 1fr !important;
+  }
+
+  .full-field {
+    grid-column: auto !important;
+  }
+
+  .form-field {
+    min-width: 0;
+  }
+
+  .form-field input,
+  .form-field textarea,
+  .form-field select {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+  }
+
+  .form-actions {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+
+    gap: 9px;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+
+  /* -------------------------------------------------------
+     MODALS
+     ------------------------------------------------------- */
+
+  .family-modal-overlay {
+    padding: 12px;
+  }
+
+  .family-modal,
+  .family-modal.large {
+    width: 100%;
+    max-width: 100%;
+
+    max-height: 92vh;
+
+    padding: 18px;
+  }
+}
+
+
+/* =========================================================
+   SMALL PHONES — 520px AND BELOW
+   ========================================================= */
+
+@media (max-width: 520px) {
+
+  /* -------------------------------------------------------
+     HEADER
+     ------------------------------------------------------- */
+
+  .family-header {
+    height: 64px;
+    min-height: 64px;
+
+    padding:
+      8px
+      8px;
+  }
+
+
+  /* -------------------------------------------------------
+     SIDEBAR
+     ------------------------------------------------------- */
+
+  .dashboard-body > aside {
+    top: 64px;
+
+    height: calc(100vh - 64px);
+
+    width: 280px !important;
+    max-width: 85vw;
+  }
+
+  .family-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .family-sidebar.closed {
+    transform: translateX(-100%);
+  }
+
+
+  /* -------------------------------------------------------
+     MAIN
+     ------------------------------------------------------- */
+
+  .main {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-width: 0 !important;
+
+    overflow-x: hidden !important;
+  }
+
+
+  /* -------------------------------------------------------
+     CONTENT
+     ------------------------------------------------------- */
+
+  .family-content {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding:
+      15px
+      10px
+      35px !important;
+  }
+
+
+  /* -------------------------------------------------------
+     WELCOME
+     ------------------------------------------------------- */
+
+  .welcome-card {
+    padding:
+      22px
+      18px;
+  }
+
+  .welcome-card h2 {
+    font-size: 25px;
+  }
+
+  .welcome-card p {
+    font-size: 13px;
+  }
+
+
+  /* -------------------------------------------------------
+     PAGE HEADER
+     ------------------------------------------------------- */
+
+  .family-page-top {
+    width: 100% !important;
+
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .family-page-top h1 {
+    font-size: 23px;
+  }
+
+
+  /* -------------------------------------------------------
+     PAGE CARDS
+     ------------------------------------------------------- */
+
+  .family-page-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+
+    padding: 16px !important;
+  }
+
+
+  /* -------------------------------------------------------
+     PANELS
+     ------------------------------------------------------- */
+
+  .dashboard-panel {
+    padding: 16px !important;
+  }
+
+  .panel-header h3 {
+    font-size: 17px;
+  }
+
+  .dashboard-section-heading h2 {
+    font-size: 19px;
+  }
+
+
+  /* -------------------------------------------------------
+     PROFILE
+     ------------------------------------------------------- */
+
+  .profile-hero-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES — 380px AND BELOW
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  .family-header {
+    padding-left: 6px;
+    padding-right: 6px;
+
+    gap: 5px;
+  }
+
+  .family-content {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .family-page-top {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .family-page-card,
+  .dashboard-panel {
+    padding: 14px !important;
+  }
+
+  .welcome-card {
+    padding: 19px 15px;
+  }
+
+  .welcome-card h2 {
+    font-size: 23px;
+  }
+
+  .family-page-top h1 {
+    font-size: 21px;
+  }
+
+  .dashboard-section-heading h2 {
+    font-size: 18px;
+  }
+}
+
+/* =========================================
+   MOBILE RESPONSIVE FIX
+   ========================================= */
+
+@media (max-width: 800px) {
+
+  /* Dashboard should use the full phone width */
+  .dashboard {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* Do not keep sidebar as a flex column on mobile */
+  .dashboard-body {
+    position: relative;
+    display: block !important;
+    width: 100%;
+    height: calc(100dvh - 68px);
+    overflow: hidden;
+  }
+
+  /* ACTUAL SIDEBAR */
+  .dashboard-body > aside {
+    position: fixed !important;
+    top: 68px;
+    left: 0;
+
+    width: 280px;
+    max-width: 85vw;
+    height: calc(100dvh - 68px);
+
+    z-index: 2000;
+
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    flex: none !important;
+  }
+
+  /* Sidebar OPEN */
+  .dashboard-body > aside.open {
+    transform: translateX(0);
+  }
+
+  /* Sidebar CLOSED */
+  .dashboard-body > aside.closed {
+    transform: translateX(-100%);
+  }
+
+  /* Main content takes entire mobile width */
+  .main {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    height: calc(100dvh - 68px);
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* Prevent children from making page wider */
+  .main > * {
+    max-width: 100%;
+  }
+
+  /* Images */
+  .main img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Tables */
+  .main table {
+    max-width: 100%;
+  }
+
+  /* Cards */
+  .main .card,
+  .main .dashboard-card,
+  .main .page-card {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Grids become one column */
+  .main .grid,
+  .main .cards-grid,
+  .main .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Forms */
+  .main input,
+  .main select,
+  .main textarea,
+  .main button {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Prevent long text from overflowing */
+  .main h1,
+  .main h2,
+  .main h3,
+  .main h4,
+  .main p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+
+/* =========================================
+   SMALL PHONES
+   ========================================= */
+
+@media (max-width: 480px) {
+
+  .dashboard-body > aside {
+    width: 270px;
+    max-width: 82vw;
+  }
+
+  .main {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+
+/* =========================================
+   VERY SMALL PHONES
+   ========================================= */
+
+@media (max-width: 380px) {
+
+  .dashboard-body > aside {
+    width: 250px;
+    max-width: 80vw;
+  }
+
+  .main {
+    font-size: 14px;
+  }
+}

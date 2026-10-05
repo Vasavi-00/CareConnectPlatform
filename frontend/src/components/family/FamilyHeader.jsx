@@ -769,11 +769,10 @@ export default function FamilyHeader({
                 </div>
 
                 <h3>
-                  Connection Request Sent
+                  Elder connected successfully
                 </h3>
 
                 <p>
-                  Elder connected successfully.
                   Their profile is now available
                   on your family dashboard.
                 </p>

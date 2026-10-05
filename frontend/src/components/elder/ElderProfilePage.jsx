@@ -46,6 +46,7 @@ export default function ElderProfilePage({
   const [profileError, setProfileError] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -103,9 +104,11 @@ export default function ElderProfilePage({
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!window.confirm("Permanently delete your elder account and associated care data? This cannot be undone.")) return;
+  const handleDeleteAccount = () => {
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteAccount = async () => {
     try {
       setDeletingAccount(true);
       setDeleteAccountError("");
@@ -113,6 +116,7 @@ export default function ElderProfilePage({
       localStorage.removeItem("careconnect_access");
       localStorage.removeItem("careconnect_refresh");
       localStorage.removeItem("careconnect_user");
+      setShowDeleteConfirm(false);
       navigate("/login", { replace: true });
     } catch (err) {
       setDeleteAccountError(err?.message || "Unable to delete your account.");
@@ -405,6 +409,21 @@ export default function ElderProfilePage({
         </div>
         <button type="button" onClick={handleDeleteAccount} disabled={deletingAccount}><FaTrash />{deletingAccount ? "Deleting…" : "Delete Account"}</button>
       </section>
+
+      {showDeleteConfirm && (
+        <div className="small-confirm-modal-backdrop" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="small-confirm-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="small-confirm-icon"><FaTriangleExclamation /></div>
+            <h3>Delete elder account?</h3>
+            <p>Permanently delete your elder account and associated care data. This action cannot be undone.</p>
+            {deleteAccountError && <div className="profile-error small-confirm-error">{deleteAccountError}</div>}
+            <div className="small-confirm-actions">
+              <button type="button" className="small-confirm-secondary" onClick={() => setShowDeleteConfirm(false)}>Keep account</button>
+              <button type="button" className="small-confirm-danger" onClick={confirmDeleteAccount} disabled={deletingAccount}>{deletingAccount ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingProfile && (
         <div className="elder-profile-edit-overlay" onClick={() => setEditingProfile(false)}>

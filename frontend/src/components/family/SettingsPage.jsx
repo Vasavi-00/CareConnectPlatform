@@ -28,6 +28,7 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setAccount({
@@ -76,13 +77,16 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
     navigate("/login", { replace: true });
   };
 
-  const handleDeleteAccount = async () => {
-    if (!window.confirm("Permanently delete your family account and its associated data? This cannot be undone.")) return;
+  const handleDeleteAccount = () => {
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteAccount = async () => {
     try {
       setDeleting(true);
       setDeleteError("");
       await deleteMyAccount();
+      setShowDeleteConfirm(false);
       signOut();
     } catch (err) {
       setDeleteError(err.message || "Unable to delete your account.");
@@ -129,6 +133,21 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
       <div className="settings-save-area">{saved && <span className="settings-saved-message">✓ Changes saved successfully</span>}<button type="button" className="settings-save-button" onClick={handleSave} disabled={saving}><FaFloppyDisk />{saving ? "Saving…" : "Save Changes"}</button></div>
       <section className="logout-card"><div className="logout-icon"><FaRightFromBracket /></div><div className="logout-content"><h3>Sign Out</h3><p>Sign out of your CareConnect family account on this device.</p></div><button type="button" className="logout-button" onClick={signOut}>Sign Out</button></section>
       <section className="delete-account-card"><div className="delete-account-icon"><FaTriangleExclamation /></div><div className="delete-account-content"><h3>Delete Family Account</h3><p>Permanently delete your account and associated family data.</p>{deleteError && <span role="alert">{deleteError}</span>}</div><button type="button" className="delete-account-button" onClick={handleDeleteAccount} disabled={deleting}><FaTrash />{deleting ? "Deleting…" : "Delete Account"}</button></section>
+
+      {showDeleteConfirm && (
+        <div className="small-confirm-modal-backdrop" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="small-confirm-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="small-confirm-icon"><FaTriangleExclamation /></div>
+            <h3>Delete family account?</h3>
+            <p>Permanently delete your family account and associated data. This action cannot be undone.</p>
+            {deleteError && <div className="settings-error small-confirm-error">{deleteError}</div>}
+            <div className="small-confirm-actions">
+              <button type="button" className="small-confirm-secondary" onClick={() => setShowDeleteConfirm(false)}>Keep account</button>
+              <button type="button" className="small-confirm-danger" onClick={confirmDeleteAccount} disabled={deleting}>{deleting ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

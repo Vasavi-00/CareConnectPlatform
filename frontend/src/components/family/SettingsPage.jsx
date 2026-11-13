@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   FaGear, FaUser, FaLock, FaBell,
   FaShieldHeart, FaRightFromBracket, FaFloppyDisk, FaChevronRight,
-  FaTriangleExclamation, FaTrash,
+  FaTriangleExclamation, FaTrash, FaFileContract,
 } from "react-icons/fa6";
 import { deleteMyAccount, updateFamilyProfile } from "../../services/api/familyApi";
+import useFocusTrap from "../../hooks/useFocusTrap";
+import clearCareConnectSession from "../../services/clearSession";
 import "../../styles/family/SettingsPage.css";
 
 export default function SettingsPage({ user, familyProfile, onProfileUpdated }) {
@@ -29,6 +31,8 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const closeDeleteConfirm = () => setShowDeleteConfirm(false);
+  const deleteDialogRef = useFocusTrap(showDeleteConfirm, closeDeleteConfirm);
 
   useEffect(() => {
     setAccount({
@@ -71,9 +75,7 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
   };
 
   const signOut = () => {
-    localStorage.removeItem("careconnect_access");
-    localStorage.removeItem("careconnect_refresh");
-    localStorage.removeItem("careconnect_user");
+    clearCareConnectSession();
     navigate("/login", { replace: true });
   };
 
@@ -125,7 +127,7 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
         </div>
         <div className="dashboard-preferences-card">
           <div className="settings-section-header"><div><h2><FaShieldHeart /> Connected care</h2><p>Manage elders connected to your family account.</p></div></div>
-          <div className="privacy-list"><PrivacyItem icon={<FaUser />} title="Connected elders" description="View your family dashboard and linked elder profiles." button="View dashboard" onClick={() => navigate("/dashboard/family")} /></div>
+          <div className="privacy-list"><PrivacyItem icon={<FaUser />} title="Connected elders" description="View your family dashboard and linked elder profiles." button="View dashboard" onClick={() => navigate("/dashboard/family")} /><PrivacyItem icon={<FaFileContract />} title="Terms & Conditions" description="Review CareConnect policies, privacy safeguards, and medical disclaimers." button="View terms" onClick={() => navigate("/terms")} /></div>
         </div>
       </section>
 
@@ -135,14 +137,14 @@ export default function SettingsPage({ user, familyProfile, onProfileUpdated }) 
       <section className="delete-account-card"><div className="delete-account-icon"><FaTriangleExclamation /></div><div className="delete-account-content"><h3>Delete Family Account</h3><p>Permanently delete your account and associated family data.</p>{deleteError && <span role="alert">{deleteError}</span>}</div><button type="button" className="delete-account-button" onClick={handleDeleteAccount} disabled={deleting}><FaTrash />{deleting ? "Deleting…" : "Delete Account"}</button></section>
 
       {showDeleteConfirm && (
-        <div className="small-confirm-modal-backdrop" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="small-confirm-modal-card" onClick={(event) => event.stopPropagation()}>
+        <div className="small-confirm-modal-backdrop" role="presentation" onClick={closeDeleteConfirm}>
+          <div ref={deleteDialogRef} className="small-confirm-modal-card" role="alertdialog" aria-modal="true" aria-label="Delete family account confirmation" onClick={(event) => event.stopPropagation()}>
             <div className="small-confirm-icon"><FaTriangleExclamation /></div>
             <h3>Delete family account?</h3>
             <p>Permanently delete your family account and associated data. This action cannot be undone.</p>
             {deleteError && <div className="settings-error small-confirm-error">{deleteError}</div>}
             <div className="small-confirm-actions">
-              <button type="button" className="small-confirm-secondary" onClick={() => setShowDeleteConfirm(false)}>Keep account</button>
+              <button type="button" className="small-confirm-secondary" onClick={closeDeleteConfirm}>Keep account</button>
               <button type="button" className="small-confirm-danger" onClick={confirmDeleteAccount} disabled={deleting}>{deleting ? "Deleting…" : "Delete"}</button>
             </div>
           </div>

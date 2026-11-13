@@ -2,12 +2,8 @@
   padding: 24px 28px 35px;
   max-width: 1400px;
   margin: 0 auto;
-  background:
-    linear-gradient(
-      135deg,
-      #6baafc 0%,
-      #2982ef 100%
-    );
+  background: linear-gradient(135deg, #6baafc 0%, #2982ef 100%);
+  min-height: 100%;
 }
 
 
@@ -35,17 +31,13 @@
 
   border-radius: 20px;
 
-  background: linear-gradient(
+  background: linear-gradient(135deg,
 
-    135deg,
+      #e5f2ff 0%,
 
-    #e5f2ff 0%,
+      #dcecff 55%,
 
-    #dcecff 55%,
-
-    #e8f8f1 100%
-
-  );
+      #e8f8f1 100%);
 
   border: 1px solid rgba(255, 255, 255, 0.7);
 
@@ -270,7 +262,7 @@
   gap: 6px;
 }
 
-.notification-filters > svg {
+.notification-filters>svg {
   margin-right: 4px;
 
   color: #7995ad;

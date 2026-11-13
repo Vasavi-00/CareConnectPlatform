@@ -11,13 +11,9 @@
 
   box-sizing: border-box;
 
-  color: #203b5f;
-  background:
-    linear-gradient(
-      135deg,
-      #6baafc 0%,
-      #2982ef 100%
-    );
+  color: #0f172a;
+  background: linear-gradient(135deg, #6baafc 0%, #2982ef 100%);
+  min-height: 100%;
 }
 
 
@@ -40,12 +36,10 @@
 
   border-radius: 20px;
 
-  background: linear-gradient(
-    135deg,
-    #e5f2ff 0%,
-    #dcecff 55%,
-    #e8f8f1 100%
-  );
+  background: linear-gradient(135deg,
+      #e5f2ff 0%,
+      #dcecff 55%,
+      #e8f8f1 100%);
 
   border: 1px solid rgba(255, 255, 255, 0.7);
 
@@ -830,6 +824,7 @@
     margin-left: 58px;
   }
 }
+
 .settings-account-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

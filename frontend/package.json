@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test": "node --test src/**/*.test.js",
+    "test:auth": "node --test src/services/api/authApi.test.js",
+    "test:voice": "node --test src/services/voice/speechSynthesis.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

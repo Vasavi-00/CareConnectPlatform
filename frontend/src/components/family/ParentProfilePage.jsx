@@ -7,6 +7,7 @@ import {
   createEmergencyContact, deleteEmergencyContact, disconnectConnectedElder, getEmergencyContacts,
   updateEmergencyContact, updateConnectedElderProfile,
 } from "../../services/api/familyApi";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import "../../styles/family/ParentProfilePage.css";
 
 const emptyContact = { name: "", relationship: "", phone: "", priority: 1, can_receive_sos: true };
@@ -28,6 +29,8 @@ export default function ParentProfilePage({ selectedElder, onElderProfileUpdated
   const [elderForm, setElderForm] = useState({});
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectError, setDisconnectError] = useState("");
+  const contactDialogRef = useFocusTrap(showContactModal);
+  const elderProfileDialogRef = useFocusTrap(editingElderProfile);
 
   const disconnectElder = async () => {
     if (!elderId || disconnecting) return;
@@ -165,11 +168,11 @@ export default function ParentProfilePage({ selectedElder, onElderProfileUpdated
         <section className="disconnect-elder-card"><div><h2>Remove Connected Elder</h2><p>This removes {elderName} from your family dashboard. Their account and care information will not be deleted.</p>{disconnectError && <p role="alert" className="profile-error">{disconnectError}</p>}</div><button type="button" className="disconnect-elder-button" onClick={disconnectElder} disabled={disconnecting}><FaTrash />{disconnecting ? "Disconnecting…" : "Disconnect Elder"}</button></section>
       </>}
 
-      {showContactModal && <div className="profile-modal-overlay" onClick={() => setShowContactModal(false)}><div className="profile-modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><h2>{editingContact ? "Edit Emergency Contact" : "Add Emergency Contact"}</h2><p>Manage an emergency contact for {elderName}.</p></div><button type="button" onClick={() => setShowContactModal(false)}><FaXmark /></button></div>
+      {showContactModal && <div className="profile-modal-overlay" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setShowContactModal(false); }}><div ref={contactDialogRef} className="profile-modal" role="dialog" aria-modal="true" aria-label={editingContact ? "Edit emergency contact" : "Add emergency contact"} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><h2>{editingContact ? "Edit Emergency Contact" : "Add Emergency Contact"}</h2><p>Manage an emergency contact for {elderName}.</p></div><button type="button" aria-label="Close emergency contact form" onClick={() => setShowContactModal(false)}><FaXmark /></button></div>
         <form onSubmit={saveContact}><div className="modal-form-grid"><div className="form-group"><label>Full Name</label><input required value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} /></div><div className="form-group"><label>Relationship</label><input required value={contactForm.relationship} onChange={(e) => setContactForm({ ...contactForm, relationship: e.target.value })} /></div><div className="form-group"><label>Phone Number</label><input required value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></div><label className="primary-checkbox"><input type="checkbox" checked={contactForm.can_receive_sos} onChange={(e) => setContactForm({ ...contactForm, can_receive_sos: e.target.checked })} /><span>Can receive SOS alerts</span></label></div><div className="modal-actions"><button type="button" className="cancel-button" onClick={() => setShowContactModal(false)}>Cancel</button><button type="submit" className="save-button" disabled={saving}><FaFloppyDisk />{saving ? "Saving…" : editingContact ? "Save Contact" : "Add Contact"}</button></div></form>
       </div></div>}
 
-      {editingElderProfile && <div className="profile-modal-overlay" onClick={() => setEditingElderProfile(false)}><form className="profile-modal" onClick={(event) => event.stopPropagation()} onSubmit={saveElderProfile}>
+      {editingElderProfile && <div className="profile-modal-overlay" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setEditingElderProfile(false); }}><form ref={elderProfileDialogRef} className="profile-modal" role="dialog" aria-modal="true" aria-label={`Edit profile for ${elderName}`} onClick={(event) => event.stopPropagation()} onSubmit={saveElderProfile}>
         <div className="modal-header"><div><h2>Edit {elderName}&apos;s Profile</h2><p>Update the elder&apos;s profile details and care information.</p></div><button type="button" onClick={() => setEditingElderProfile(false)} aria-label="Close"><FaXmark /></button></div>
         <div className="modal-form-grid">{[["First name", "first_name"], ["Last name", "last_name"], ["Phone", "phone"], ["Date of birth", "date_of_birth"], ["Gender", "gender"], ["Address", "address"], ["City", "city"], ["State", "state"], ["PIN code", "pincode"], ["Preferred language", "preferred_language"]].map(([label, key]) => <label className="form-group" key={key}>{label}<input type={key === "date_of_birth" ? "date" : "text"} value={elderForm[key] || ""} onChange={(event) => setElderForm((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
           <label className="form-group">Medical notes<textarea value={elderForm.medical_notes || ""} onChange={(event) => setElderForm((current) => ({ ...current, medical_notes: event.target.value }))} /></label><label className="form-group">Emergency notes<textarea value={elderForm.emergency_notes || ""} onChange={(event) => setElderForm((current) => ({ ...current, emergency_notes: event.target.value }))} /></label>

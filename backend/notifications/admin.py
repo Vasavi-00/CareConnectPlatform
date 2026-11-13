@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Notification
+from .models import Notification, SOSEvent, SOSEventHistory
 
 
 @admin.register(Notification)
@@ -33,3 +33,15 @@ class NotificationAdmin(admin.ModelAdmin):
     ordering = (
         "-created_at",
     )
+
+
+@admin.register(SOSEvent)
+class SOSEventAdmin(admin.ModelAdmin):
+    list_display = ("id", "elder", "status", "notification_status", "created_at")
+    list_filter = ("status", "notification_status", "created_at")
+    search_fields = ("elder__user__email", "elder__careconnect_id")
+
+
+@admin.register(SOSEventHistory)
+class SOSEventHistoryAdmin(admin.ModelAdmin):
+    list_display = ("event", "status", "detail", "created_at")

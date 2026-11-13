@@ -1,6 +1,4 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://127.0.0.1:8000/api";
+import { API_BASE_URL } from "./baseUrl";
 
 function getToken() {
   return localStorage.getItem("careconnect_access");
@@ -312,6 +310,17 @@ export async function getNotifications() {
   return normalizeList(await request("/notifications/"));
 }
 
+export async function getSOSEvents() {
+  return normalizeList(await request("/notifications/sos/"));
+}
+
+export async function updateSOSEvent(id, action) {
+  return request(`/notifications/sos/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ action }),
+  });
+}
+
 export async function markNotificationRead(id) {
   return request(`/notifications/${id}/read/`, { method: "PATCH" });
 }
@@ -329,3 +338,20 @@ export async function getAIConversations(elderId) {
   const data = await request(`/ai/conversations/${query}`);
   return normalizeList(data);
 }
+
+export async function getAISummaries(elderId) {
+  const query = elderId ? `?elder_id=${encodeURIComponent(elderId)}` : "";
+  return normalizeList(await request(`/ai/summaries/${query}`));
+}
+
+/* =========================================================
+   SUPPORT
+========================================================= */
+
+export async function sendSupportMessage(payload) {
+  return request("/support/message/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+

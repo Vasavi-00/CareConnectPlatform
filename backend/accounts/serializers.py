@@ -850,3 +850,35 @@ class ResetPasswordSerializer(serializers.Serializer):
         attrs["user"] = user
 
         return attrs
+
+
+# ============================================================
+# SUPPORT MESSAGE
+# ============================================================
+
+class SupportMessageSerializer(serializers.Serializer):
+
+    name = serializers.CharField(
+        max_length=150,
+        trim_whitespace=True,
+    )
+
+    email = serializers.EmailField()
+
+    message = serializers.CharField(
+        max_length=5000,
+        trim_whitespace=True,
+    )
+
+    def validate_name(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError("Name cannot be empty.")
+        return val
+
+    def validate_message(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError("Message cannot be empty.")
+        return val
+

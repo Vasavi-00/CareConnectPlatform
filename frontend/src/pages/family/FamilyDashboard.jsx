@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Link,
   Routes,
   Route,
   useLocation,
@@ -27,6 +28,7 @@ import "../../styles/family/FamilyDashboard.css";
 
 export default function FamilyDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [user, setUser] = useState(null);
   const [familyProfile, setFamilyProfile] = useState(null);
@@ -36,6 +38,7 @@ export default function FamilyDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   const location = useLocation();
 
@@ -57,18 +60,42 @@ export default function FamilyDashboard() {
   };
 
   useEffect(() => {
-  const handleResize = () => {
-    setSidebarOpen(window.innerWidth > 800);
+    const handleResize = () => {
+      const mobile = window.matchMedia("(max-width: 800px)").matches;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [location.pathname, isMobile]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const closeOnOutsidePointer = (event) => {
+      if (!isMobile || event.target.closest(".header-menu-button")) return;
+      const sidebar = document.getElementById("family-navigation-sidebar");
+      if (sidebar && !sidebar.contains(event.target)) setSidebarOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [sidebarOpen, isMobile]);
+
+  const closeSidebarAfterNavigation = () => {
+    if (isMobile) setSidebarOpen(false);
   };
-
-  handleResize();
-
-  window.addEventListener("resize", handleResize);
-
-  return () => {
-    window.removeEventListener("resize", handleResize);
-  };
-}, []);
 
   // =========================================================
   // LOAD FAMILY DASHBOARD DATA
@@ -127,7 +154,7 @@ export default function FamilyDashboard() {
     }
 
     loadDashboard();
-  }, []);
+  }, [retryKey]);
 
   // =========================================================
   // SCROLL TO TOP WHEN PAGE CHANGES
@@ -174,7 +201,8 @@ export default function FamilyDashboard() {
         <p>{error}</p>
 
         <button
-          onClick={() => window.location.reload()}
+          type="button"
+          onClick={() => setRetryKey((value) => value + 1)}
         >
           Try Again
         </button>
@@ -203,8 +231,19 @@ export default function FamilyDashboard() {
 
       <div className="dashboard-body">
 
+        {isMobile && sidebarOpen && (
+          <button
+            type="button"
+            className="family-sidebar-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         <FamilySidebar
           sidebarOpen={sidebarOpen}
+          isMobile={isMobile}
+          onNavigate={closeSidebarAfterNavigation}
         />
 
         <main className="main">
@@ -324,6 +363,17 @@ export default function FamilyDashboard() {
             <Route
               path="help"
               element={<HelpPage />}
+            />
+
+            <Route
+              path="*"
+              element={(
+                <section className="dashboard-route-not-found" role="status">
+                  <h1>Page not found</h1>
+                  <p>This family dashboard page does not exist.</p>
+                  <Link to="/dashboard/family">Return to overview</Link>
+                </section>
+              )}
             />
 
           </Routes>

@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import LandingPage from "./pages/LandingPage/LandingPage";
 import AuthPage from "./pages/AuthPage/AuthPage";
@@ -11,6 +7,7 @@ import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 
 import FamilyDashboard from "./pages/family/FamilyDashboard";
 import ElderDashboard from "./pages/elder/ElderDashboard";
+import TermsPage from "./pages/TermsPage/TermsPage";
 
 /* =========================================================
    STORED USER
@@ -42,11 +39,14 @@ function ProtectedFamilyRoute({
   children,
 }) {
   const user = getStoredUser();
+  const accessToken = localStorage.getItem("careconnect_access");
+  const location = useLocation();
 
-  if (!user) {
+  if (!user || !accessToken) {
     return (
       <Navigate
         to="/login"
+        state={{ from: location }}
         replace
       />
     );
@@ -81,11 +81,14 @@ function ProtectedElderRoute({
   children,
 }) {
   const user = getStoredUser();
+  const accessToken = localStorage.getItem("careconnect_access");
+  const location = useLocation();
 
-  if (!user) {
+  if (!user || !accessToken) {
     return (
       <Navigate
         to="/login"
+        state={{ from: location }}
         replace
       />
     );
@@ -110,6 +113,24 @@ function ProtectedElderRoute({
   }
 
   return children;
+}
+
+function NotFoundPage() {
+  const user = getStoredUser();
+  const home = user?.role === "ELDER"
+    ? "/elder/dashboard"
+    : user?.role === "FAMILY"
+      ? "/dashboard/family"
+      : "/";
+
+  return (
+    <main className="app-not-found">
+      <p>CareConnect</p>
+      <h1>Page not found</h1>
+      <p>That page may have moved, or the address may be incorrect.</p>
+      <Link to={home}>{user ? "Return to your dashboard" : "Return to home"}</Link>
+    </main>
+  );
 }
 
 /* =========================================================
@@ -144,6 +165,16 @@ function App() {
         path="/forgot-password"
         element={<ForgotPassword />}
       />
+
+      <Route
+        path="/terms"
+        element={<TermsPage />}
+      />
+
+      <Route
+        path="/terms-and-conditions"
+        element={<TermsPage />}
+      />
       {/* FAMILY */}
 
       <Route
@@ -168,17 +199,7 @@ function App() {
         }
       />
 
-      {/* FALLBACK */}
-
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to="/"
-            replace
-          />
-        }
-      />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

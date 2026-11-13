@@ -7,19 +7,15 @@
 
   padding: 28px 30px 40px;
 
-  background:
-    linear-gradient(
-      135deg,
-      #6baafc 0%,
-      #2982ef 100%
-    );
+  background: linear-gradient(135deg, #6baafc 0%, #2982ef 100%);
+  min-height: 100%;
 
   font-family:
     "Poppins",
     system-ui,
     sans-serif;
 
-  color: #172d62;
+  color: #0f172a;
 }
 
 
@@ -78,8 +74,7 @@
   display: grid;
 
   grid-template-columns:
-    minmax(0, 1.7fr)
-    minmax(280px, 0.8fr);
+    minmax(0, 1.7fr) minmax(280px, 0.8fr);
 
   gap: 20px;
 
@@ -184,9 +179,9 @@
 .form-group label {
   color: #435578;
 
-  font-size: 11px;
+  font-size: 14px;
 
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .form-group input,
@@ -206,7 +201,7 @@
 
   font-family: inherit;
 
-  font-size: 11px;
+  font-size: 15px;
 
   transition:
     border-color 0.2s ease,
@@ -215,9 +210,15 @@
 
 .form-group input,
 .form-group select {
-  height: 40px;
+  height: 48px;
 
   padding: 0 11px;
+}
+
+.appointment-field-error {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .form-group textarea {
@@ -372,11 +373,9 @@
   border-radius: 18px;
 
   background:
-    linear-gradient(
-      145deg,
+    linear-gradient(145deg,
       #edf5ff 0%,
-      #e8f1ff 100%
-    );
+      #e8f1ff 100%);
 
   border: 1px solid #d4e4fb;
 }
@@ -498,7 +497,7 @@
   background: #ffffff;
 }
 
-.appointment-help > svg {
+.appointment-help>svg {
   color: #0b65d8;
 
   margin-top: 2px;
@@ -909,7 +908,7 @@
   color: #1b9a60;
 }
 
-.past-appointment-card > div:nth-child(2) {
+.past-appointment-card>div:nth-child(2) {
   flex: 1;
 }
 
@@ -1019,12 +1018,10 @@
 
   border-radius: 20px;
 
-  background: linear-gradient(
-    135deg,
-    #e5f2ff 0%,
-    #dcecff 55%,
-    #e8f8f1 100%
-  );
+  background: linear-gradient(135deg,
+      #e5f2ff 0%,
+      #dcecff 55%,
+      #e8f8f1 100%);
 
   border: 1px solid rgba(255, 255, 255, 0.7);
 

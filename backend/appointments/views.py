@@ -228,8 +228,11 @@ class AppointmentDetailView(
         send_appointment_reminder_notifications(updated_appointment)
 
     def perform_destroy(self, instance):
+        if instance.status in {"CANCELLED", "CANCELED", "COMPLETED"}:
+            return
         create_appointment_cancelled_notification(
             elder=instance.elder,
             appointment=instance,
         )
-        instance.delete()
+        instance.status = "CANCELLED"
+        instance.save(update_fields=["status", "updated_at"])

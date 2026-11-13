@@ -1,8 +1,9 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
+    FaArrowLeft,
     FaArrowRight,
     FaCheck,
     FaEnvelope,
@@ -17,11 +18,9 @@ import {
 } from "react-icons/fa";
 import { FaCircleCheck } from "react-icons/fa6";
 import { FaXmark } from "react-icons/fa6";
+import useSafeBack from "../../hooks/useSafeBack";
 import "../../styles/AuthPage/auth.css";
-
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://127.0.0.1:8000/api";
+import { API_BASE_URL } from "../../services/api/baseUrl";
 
 
 /* =========================================================
@@ -48,6 +47,8 @@ function AuthPage({ mode }) {
     const isLogin = mode === "login";
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const goBack = useSafeBack("/");
 
 
     /* =====================================================
@@ -89,9 +90,15 @@ function AuthPage({ mode }) {
 
         const { name, value } = event.target;
 
+        let nextValue = value;
+        if (name === "phone") {
+            // Strip any character that is not a digit (disallow characters/symbols)
+            nextValue = value.replace(/\D/g, "").slice(0, 10);
+        }
+
         setForm((previous) => ({
             ...previous,
-            [name]: value,
+            [name]: nextValue,
         }));
 
         if (error) {
@@ -361,15 +368,15 @@ function AuthPage({ mode }) {
                 data.user?.role === "ELDER"
             ) {
 
-                navigate(
-                    "/elder/dashboard"
-                );
+                const requested = location.state?.from;
+                const safeRequested = requested?.pathname?.startsWith("/elder/") ? requested : null;
+                navigate(safeRequested || "/elder/dashboard", { replace: true });
 
             } else {
 
-                navigate(
-                    "/dashboard/family"
-                );
+                const requested = location.state?.from;
+                const safeRequested = requested?.pathname === "/dashboard/family" || requested?.pathname?.startsWith("/dashboard/family/") ? requested : null;
+                navigate(safeRequested || "/dashboard/family", { replace: true });
             }
 
 
@@ -416,6 +423,7 @@ function AuthPage({ mode }) {
 
         navigate("/login", {
             replace: true,
+            state: location.state,
         });
     };
 
@@ -500,6 +508,27 @@ function AuthPage({ mode }) {
 
                     <section className="auth-card success-card">
 
+                        <div className="auth-card-top-nav">
+                            <button
+                                type="button"
+                                className="auth-back-button"
+                                onClick={goBack}
+                                aria-label="Back to CareConnect"
+                                title="Back to CareConnect"
+                            >
+                                <FaArrowLeft className="back-arrow-icon" />
+                                <span className="back-button-label">Back</span>
+                            </button>
+
+                            <Link
+                                className="auth-brand mobile-brand"
+                                to="/"
+                                aria-label="CareConnect Home"
+                            >
+                                <FaHeart />
+                                Care<span>Connect</span>
+                            </Link>
+                        </div>
 
                         <div className="success-icon">
 
@@ -731,29 +760,29 @@ function AuthPage({ mode }) {
 
                 <section className="auth-card">
                     
-                    <div className="auth-back">
-                        <Link
-                            to="/"
-                            className="back-button"
+                    {/* TOP NAVIGATION / PROPERLY PLACED BACK BUTTON */}
+                    <div className="auth-card-top-nav">
+                        <button
+                            type="button"
+                            className="auth-back-button"
+                            onClick={goBack}
                             aria-label="Back to CareConnect"
                             title="Back to CareConnect"
                         >
-                            ←
+                            <FaArrowLeft className="back-arrow-icon" />
+                            <span className="back-button-label">Back</span>
+                        </button>
+
+                        {/* MOBILE BRAND */}
+                        <Link
+                            className="auth-brand mobile-brand"
+                            to="/"
+                            aria-label="CareConnect Home"
+                        >
+                            <FaHeart />
+                            Care<span>Connect</span>
                         </Link>
                     </div>
-
-                    {/* MOBILE BRAND */}
-
-                    <Link
-                        className="auth-brand mobile-brand"
-                        to="/"
-                    >
-
-                        <FaHeart />
-
-                        Care<span>Connect</span>
-
-                    </Link>
 
 
                     {/* =================================================
@@ -1050,11 +1079,32 @@ function AuthPage({ mode }) {
                                     <input
                                         type="tel"
                                         name="phone"
-                                        placeholder="Your contact number"
+                                        placeholder="10-digit mobile number"
                                         value={form.phone}
                                         onChange={update}
+                                        onKeyDown={(e) => {
+                                            // Reject all non-digit keys, allowing only editing keys and shortcuts
+                                            if (
+                                                !/^\d$/.test(e.key) &&
+                                                !["Backspace", "Tab", "ArrowLeft", "ArrowRight", "Delete", "Enter"].includes(e.key) &&
+                                                !e.ctrlKey &&
+                                                !e.metaKey
+                                            ) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onPaste={(e) => {
+                                            e.preventDefault();
+                                            const pasted = e.clipboardData?.getData("text") || "";
+                                            const digits = pasted.replace(/\D/g, "").slice(0, 10);
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                phone: digits,
+                                            }));
+                                        }}
                                         autoComplete="tel"
                                         inputMode="numeric"
+                                        pattern="[0-9]*"
                                         maxLength={10}
                                     />
 
@@ -1234,6 +1284,7 @@ function AuthPage({ mode }) {
 
                                 <Link
                                     to="/forgot-password"
+                                    state={location.state}
                                     className="forgot-link"
                                 >
                                     Forgot password?
@@ -1247,6 +1298,15 @@ function AuthPage({ mode }) {
                         {/* =================================================
                            SUBMIT
                         ================================================= */}
+
+                        {!isLogin && (
+                            <p className="auth-terms-note">
+                                By signing up, you agree to CareConnect's{" "}
+                                <Link to="/terms" target="_blank" rel="noopener noreferrer">
+                                    Terms &amp; Conditions
+                                </Link>.
+                            </p>
+                        )}
 
                         <button
                             type="submit"
@@ -1288,6 +1348,7 @@ function AuthPage({ mode }) {
                                     ? "/signup"
                                     : "/login"
                             }
+                            state={location.state}
                         >
 
                             {isLogin

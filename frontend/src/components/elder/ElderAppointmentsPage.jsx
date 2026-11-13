@@ -1,5 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import useSafeBack from "../../hooks/useSafeBack";
+import { speakText } from "../../services/voice/speechSynthesis";
 import {
   FaArrowLeft,
   FaCalendarCheck,
@@ -9,17 +11,18 @@ import {
   FaCheck,
 } from "react-icons/fa6";
 
-export default function ElderAppointmentsPage({ appointments = [] }) {
+export default function ElderAppointmentsPage({ appointments = [], profile }) {
   const navigate = useNavigate();
+  const goBack = useSafeBack("/elder/dashboard");
 
   const now = new Date();
 
   const upcoming = appointments
-    .filter((a) => a?.appointment_at && new Date(a.appointment_at) >= now)
+    .filter((a) => a?.appointment_at && new Date(a.appointment_at) >= now && !["CANCELLED", "CANCELED", "COMPLETED"].includes(a.status))
     .sort((a, b) => new Date(a.appointment_at) - new Date(b.appointment_at));
 
   const past = appointments
-    .filter((a) => a?.appointment_at && new Date(a.appointment_at) < now)
+    .filter((a) => a?.appointment_at && (new Date(a.appointment_at) < now || ["CANCELLED", "CANCELED", "COMPLETED"].includes(a.status)))
     .sort((a, b) => new Date(b.appointment_at) - new Date(a.appointment_at));
 
   return (
@@ -28,7 +31,7 @@ export default function ElderAppointmentsPage({ appointments = [] }) {
         <button
           type="button"
           className="elder-back-btn"
-          onClick={() => navigate("/elder/dashboard")}
+          onClick={goBack}
         >
           <FaArrowLeft /> Back to Home
         </button>
@@ -58,11 +61,28 @@ export default function ElderAppointmentsPage({ appointments = [] }) {
                     <p className="appt-clinic">
                       <FaLocationDot /> {appt.clinic_name || "Healthcare Clinic"}
                     </p>
+                    {appt.location && <p className="appt-clinic"><FaLocationDot /> {appt.location}</p>}
                     {appt.reason && (
                       <p className="appt-reason-line">
                         <FaNotesMedical /> <strong>Reason:</strong> {appt.reason}
                       </p>
                     )}
+                    <div className="elder-appointment-actions">
+                      <button
+                        type="button"
+                        onClick={() => speakText(
+                          `Your appointment is with ${appt.doctor_name} at ${appt.clinic_name || "your clinic"} on ${new Date(appt.appointment_at).toLocaleString("en-IN")}.`,
+                          profile?.preferred_language === "Telugu" ? "te-IN" : "en-IN",
+                          profile?.voice_speed || 1
+                        )}
+                        aria-label={`Hear appointment details for ${appt.doctor_name}`}
+                      >Hear appointment</button>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/elder/family")}
+                        aria-label="Open family contacts for help with this appointment"
+                      >Ask family for help</button>
+                    </div>
                   </div>
                 </div>
 
@@ -110,6 +130,7 @@ export default function ElderAppointmentsPage({ appointments = [] }) {
                     <p className="appt-clinic">
                       <FaLocationDot /> {appt.clinic_name || "Healthcare Clinic"}
                     </p>
+                    {appt.location && <p className="appt-clinic"><FaLocationDot /> {appt.location}</p>}
                   </div>
                 </div>
 
@@ -121,7 +142,7 @@ export default function ElderAppointmentsPage({ appointments = [] }) {
                       year: "numeric",
                     })}
                   </span>
-                  <span className="appt-completed-tag">Completed</span>
+                  <span className="appt-completed-tag">{appt.status === "CANCELLED" || appt.status === "CANCELED" ? "Cancelled" : appt.status === "COMPLETED" ? "Completed" : "Past"}</span>
                 </div>
               </div>
             ))}

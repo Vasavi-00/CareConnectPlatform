@@ -7,13 +7,9 @@
   max-width: 1500px;
   margin: 0 auto;
   padding: 28px 32px 40px;
-  color: #263b57;
-  background:
-    linear-gradient(
-      135deg,
-      #6baafc 0%,
-      #2982ef 100%
-    );
+  color: #0f172a;
+  background: linear-gradient(135deg, #6baafc 0%, #2982ef 100%);
+  min-height: 100%;
 }
 
 
@@ -34,12 +30,10 @@
 
   border-radius: 20px;
 
-  background: linear-gradient(
-    135deg,
-    #e5f2ff 0%,
-    #dcecff 55%,
-    #e8f8f1 100%
-  );
+  background: linear-gradient(135deg,
+      #e5f2ff 0%,
+      #dcecff 55%,
+      #e8f8f1 100%);
 
   border: 1px solid rgba(255, 255, 255, 0.7);
 
@@ -1073,7 +1067,7 @@
   font-size: 12px;
 }
 
-.modal-header > button {
+.modal-header>button {
   width: 32px;
   height: 32px;
 
@@ -1092,7 +1086,7 @@
   cursor: pointer;
 }
 
-.modal-header > button:hover {
+.modal-header>button:hover {
   background: #e7edf5;
 }
 

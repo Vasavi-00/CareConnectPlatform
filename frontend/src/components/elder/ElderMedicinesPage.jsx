@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import useSafeBack from "../../hooks/useSafeBack";
 import {
   FaArrowLeft,
   FaPills,
@@ -34,7 +34,7 @@ export default function ElderMedicinesPage({
   profile,
   onRefreshData,
 }) {
-  const navigate = useNavigate();
+  const goBack = useSafeBack("/elder/dashboard");
 
   const [takenPills, setTakenPills] = useState(() => {
     try {
@@ -107,7 +107,7 @@ export default function ElderMedicinesPage({
         <button
           type="button"
           className="elder-back-btn"
-          onClick={() => navigate("/elder/dashboard")}
+          onClick={goBack}
         >
           <FaArrowLeft /> Back to Home
         </button>

@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import useSafeBack from "../../hooks/useSafeBack";
 import {
   FaArrowLeft,
   FaHeart,
@@ -9,7 +9,7 @@ import {
 } from "react-icons/fa6";
 
 export default function ElderFamilyPage({ familyMembers = [] }) {
-  const navigate = useNavigate();
+  const goBack = useSafeBack("/elder/dashboard");
 
   return (
     <div className="elder-subpage">
@@ -17,7 +17,7 @@ export default function ElderFamilyPage({ familyMembers = [] }) {
         <button
           type="button"
           className="elder-back-btn"
-          onClick={() => navigate("/elder/dashboard")}
+          onClick={goBack}
         >
           <FaArrowLeft /> Back to Home
         </button>

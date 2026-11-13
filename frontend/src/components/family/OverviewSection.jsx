@@ -6,17 +6,22 @@ import {
   FaCalendarCheck,
   FaArrowRight,
   FaCircleCheck,
-  FaCircleExclamation,
   FaTriangleExclamation,
   FaRobot,
   FaClock,
   FaUserDoctor,
   FaArrowTrendUp,
+  FaUserPlus,
+  FaShieldHeart,
+  FaCircleQuestion,
 } from "react-icons/fa6";
+
+import familyElderCareImg from "../../assets/images/family-elder-care.jpg";
 
 import {
   getMedicines,
   getAppointments,
+  getSOSEvents,
 } from "../../services/api/familyApi";
 
 import "../../styles/family/OverviewSection.css";
@@ -146,15 +151,6 @@ function getRelativeAppointmentText(dateValue) {
   }
 
   return `In ${days} days`;
-}
-
-
-function isSameDay(date1, date2) {
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  );
 }
 
 
@@ -298,6 +294,7 @@ function Appointment({
             {appointment.clinic_name}
           </small>
         )}
+        {appointment?.location && <small>{appointment.location}</small>}
       </div>
 
       <div className="appointment-status">
@@ -337,8 +334,19 @@ export default function OverviewSection({
 
   const [appointmentError, setAppointmentError] =
     useState("");
+  const [sosEvents, setSosEvents] = useState([]);
 
   const elderId = getElderId(selectedElder);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadSosEvents = () => getSOSEvents().then((events) => {
+      if (mounted) setSosEvents(Array.isArray(events) ? events : []);
+    }).catch(() => { if (mounted) setSosEvents([]); });
+    loadSosEvents();
+    const timer = window.setInterval(loadSosEvents, 15000);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, [elderId]);
 
   const firstName = getFirstName(
     user,
@@ -532,7 +540,7 @@ export default function OverviewSection({
           return false;
         }
 
-        return date >= now;
+        return date >= now && !["CANCELLED", "CANCELED", "COMPLETED"].includes(appointment.status);
       })
       .sort(
         (a, b) =>
@@ -544,7 +552,7 @@ export default function OverviewSection({
 
   const appointmentsThisWeek = useMemo(() => {
     return appointments.filter((appointment) =>
-      isThisWeek(
+      !["CANCELLED", "CANCELED"].includes(appointment.status) && isThisWeek(
         appointment?.appointment_at
       )
     ).length;
@@ -618,7 +626,7 @@ export default function OverviewSection({
 
           {/* Quote */}
           <div className="welcome-quote">
-              “A little care
+            “A little care
             <br />
             goes a long way.” ❤️
 
@@ -636,32 +644,44 @@ export default function OverviewSection({
 
         </div>
 
+
         {/* =================================================
-          NO ELDER CONNECTED
-      ================================================= */}
+            NO ELDER CONNECTED
+        ================================================= */}
 
-      <div className="overview-empty-state">
+        <div className="overview-empty-state">
 
-        <div className="overview-empty-icon">
-          <FaPills />
+          <div className="overview-empty-icon">
+            <FaPills />
+          </div>
+
+          <h2>
+            No elder connected yet
+          </h2>
+
+          <p>
+            Connect your parent or loved one to see their
+            medicines, appointments, and care information
+            here.
+          </p>
+
+          <span className="overview-connect-hint">
+            Use the{" "}
+            {onAddElder ? (
+              <button
+                type="button"
+                className="overview-hint-add-btn"
+                onClick={onAddElder}
+              >
+                + Add Elder
+              </button>
+            ) : (
+              <strong>+ Add Elder</strong>
+            )}{" "}
+            button in the header to connect an elder profile.
+          </span>
+
         </div>
-
-        <h2>
-          No elder connected yet
-        </h2>
-
-        <p>
-          Connect your parent or loved one to see their
-          medicines, appointments, and care information
-          here.
-        </p>
-
-        <span className="overview-connect-hint">
-          Use the <button type="button" onClick={onAddElder}>+ Add Elder</button> button in the
-          header to connect an elder profile.
-        </span>
-
-      </div>
 
       </section>
     );
@@ -675,49 +695,108 @@ export default function OverviewSection({
   return (
     <section className="overview">
 
+      {sosEvents.filter((event) => !elderId || String(event.elder_id) === String(elderId)).length > 0 && (
+        <section className="overview-card" aria-label="Recent emergency events">
+          <div className="overview-card-header"><h2>Emergency Events</h2></div>
+          {sosEvents.filter((event) => !elderId || String(event.elder_id) === String(elderId)).slice(0, 5).map((event) => (
+            <article key={event.id} className="sos-page-status-alert">
+              <strong>Emergency #{event.id} · {event.elder_name}</strong>
+              <p>{new Date(event.created_at).toLocaleString()} · Status: {event.status}</p>
+              <p>{event.location_available ? `Coordinates ${event.latitude}, ${event.longitude} · accuracy ${event.accuracy ?? "unknown"} m` : "Location unavailable"}</p>
+              <p>In-app notification status: {event.notification_status}; records saved for {event.notification_recipient_count} recipient(s). Read or response is not confirmed.</p>
+              {event.maps_url && <a href={event.maps_url} target="_blank" rel="noreferrer">View location in Maps</a>}
+              {event.history?.length > 0 && <ul>{event.history.map((item, index) => <li key={`${event.id}-${index}`}>{new Date(item.created_at).toLocaleString()} · {item.detail || item.status}</li>)}</ul>}
+            </article>
+          ))}
+        </section>
+      )}
+
       {/* =====================================================
           WELCOME BANNER
+      {/* =====================================================
+          PREMIUM HERO CARE BANNER
           ===================================================== */}
 
       <div className="welcome-banner">
-
-        {/* Decorative clouds */}
-        <div className="welcome-cloud cloud-one"></div>
-        <div className="welcome-cloud cloud-two"></div>
-        <div className="welcome-cloud cloud-three"></div>
+        <div className="welcome-banner-glow"></div>
 
         <div className="welcome-content">
+          <div className="welcome-live-chip">
+            <span className="live-chip-pulse"></span>
+            <span className="live-chip-text">
+              {elderName ? `Active Care · ${elderName}` : "Family Care Portal"}
+            </span>
+          </div>
 
           <h1>
-            Welcome back, {firstName}! 
+            Welcome back, {firstName}! <span className="welcome-wave">👋</span>
           </h1>
 
           <p>
-            Here's an overview of your loved one's care today.
+            {elderName
+              ? `Everything is organized for ${elderName}'s health and comfort today. Here is your real-time care summary.`
+              : "Keep your aging parents healthy, happy, and connected in one reassuring space."}
           </p>
 
+          <div className="welcome-quick-launchpad">
+            <button
+              type="button"
+              className="hero-quick-pill pill-medicine"
+              onClick={() => navigate("/dashboard/family/medicine")}
+            >
+              <FaPills /> <span>Check Medicines</span>
+            </button>
+            <button
+              type="button"
+              className="hero-quick-pill pill-appointment"
+              onClick={() => navigate("/dashboard/family/appointments")}
+            >
+              <FaCalendarCheck /> <span>Doctor Visits</span>
+            </button>
+            <button
+              type="button"
+              className="hero-quick-pill pill-ai"
+              onClick={() => navigate("/dashboard/family/ai-companion")}
+            >
+              <FaRobot /> <span>AI Companion</span>
+            </button>
+          </div>
         </div>
 
-
-        {/* Quote */}
-        <div className="welcome-quote">
-          “A little care
-          <br />
-          goes a long way.” ❤️
-
-          <span>
-            Care Creates
-            <br />
-            Happier Days”
-          </span>
-        </div>
-
-
-        {/* Decorative leaves */}
-        <div className="welcome-leaves">
-          🌿🌿🌿
-        </div>
-
+        {/* Real-time Elder Care Status Card */}
+        {selectedElder && (
+          <div className="welcome-elder-widget">
+            <div className="elder-widget-header">
+              <span className="widget-label">CARED FOR TODAY</span>
+              <span className="widget-status-dot">● Synced</span>
+            </div>
+            <div className="elder-widget-body">
+              <div className="elder-widget-avatar">
+                {(elderName || "E").charAt(0).toUpperCase()}
+              </div>
+              <div className="elder-widget-details">
+                <strong>{elderName}</strong>
+                <span>ID: {selectedElder?.careconnect_id || selectedElder?.elder_id || "Active"}</span>
+              </div>
+            </div>
+            <div className="elder-widget-footer">
+              <div className="widget-metric">
+                <span className="metric-val">{medicineStats.total}</span>
+                <span className="metric-lbl">Medicines</span>
+              </div>
+              <div className="widget-divider"></div>
+              <div className="widget-metric">
+                <span className="metric-val">{appointmentsThisWeek}</span>
+                <span className="metric-lbl">Visits</span>
+              </div>
+              <div className="widget-divider"></div>
+              <div className="widget-metric">
+                <span className="metric-val">{medicineStats.low > 0 ? `${medicineStats.low} Low` : "Good"}</span>
+                <span className="metric-lbl">Stock</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
 
@@ -759,7 +838,9 @@ export default function OverviewSection({
             <small>
               {loadingMedicines
                 ? "Loading..."
-                : `${medicineStats.low} low stock`}
+                : medicineStats.low > 0
+                  ? `${medicineStats.low} low stock warning`
+                  : "All medications available"}
             </small>
 
           </div>
@@ -789,7 +870,7 @@ export default function OverviewSection({
           <div className="overview-kpi-content">
 
             <span>
-              Appointments This Week
+              Visits This Week
             </span>
 
             {loadingAppointments ? (
@@ -817,7 +898,16 @@ export default function OverviewSection({
 
         {/* NEXT APPOINTMENT */}
 
-        <div className="overview-kpi-card next-kpi">
+        <div
+          className="overview-kpi-card next-kpi"
+          onClick={() =>
+            navigate(
+              "/dashboard/family/appointments"
+            )
+          }
+          role="button"
+          tabIndex={0}
+        >
 
           <div className="overview-kpi-icon">
             <FaClock />
@@ -826,7 +916,7 @@ export default function OverviewSection({
           <div className="overview-kpi-content">
 
             <span>
-              Next Appointment
+              Next Consultation
             </span>
 
             {loadingAppointments ? (
@@ -842,7 +932,7 @@ export default function OverviewSection({
                 <small>
                   {formatAppointmentTime(
                     nextAppointment.appointment_at
-                  )}
+                  )} · {nextAppointment.doctor_name || "Doctor"}
                 </small>
               </>
             ) : (
@@ -855,6 +945,44 @@ export default function OverviewSection({
             )}
 
           </div>
+
+          <FaArrowRight className="kpi-arrow" />
+
+        </div>
+
+
+        {/* AI COMPANION */}
+
+        <div
+          className="overview-kpi-card ai-kpi"
+          onClick={() =>
+            navigate(
+              "/dashboard/family/ai-companion"
+            )
+          }
+          role="button"
+          tabIndex={0}
+        >
+
+          <div className="overview-kpi-icon">
+            <FaRobot />
+          </div>
+
+          <div className="overview-kpi-content">
+
+            <span>
+              AI Voice Companion
+            </span>
+
+            <strong>Active Care</strong>
+
+            <small>
+              Telugu & English Companion
+            </small>
+
+          </div>
+
+          <FaArrowRight className="kpi-arrow" />
 
         </div>
 

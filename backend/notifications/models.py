@@ -120,8 +120,34 @@ class SOSEvent(models.Model):
     contact_name = models.CharField(max_length=100, blank=True)
     contact_phone = models.CharField(max_length=20, blank=True)
     contact_priority = models.PositiveIntegerField(null=True, blank=True)
+    request_id = models.UUIDField(null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    location_accuracy = models.FloatField(null=True, blank=True)
+    location_captured_at = models.DateTimeField(null=True, blank=True)
+    notification_status = models.CharField(max_length=20, default="PENDING")
+    notification_recipient_count = models.PositiveIntegerField(default=0)
+    notification_error = models.TextField(blank=True)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["elder", "request_id"],
+                condition=models.Q(request_id__isnull=False),
+                name="unique_elder_sos_request_id",
+            )
+        ]
+        ordering = ["-created_at"]
+
+
+class SOSEventHistory(models.Model):
+    event = models.ForeignKey(SOSEvent, on_delete=models.CASCADE, related_name="history")
+    status = models.CharField(max_length=20)
+    detail = models.CharField(max_length=240, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]

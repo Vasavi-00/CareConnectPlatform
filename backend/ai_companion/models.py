@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from accounts.models import ElderProfile
+from accounts.models import ElderProfile, FamilyProfile
 
 
 class AIConversation(models.Model):
@@ -91,3 +91,33 @@ class FamilyCallRequest(models.Model):
 
     def __str__(self):
         return f"Call request by {self.elder.user.email}: {self.reason}"
+
+
+class AIConversationSummary(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        SHARED = "SHARED", "Shared"
+        REVOKED = "REVOKED", "Revoked"
+
+    elder = models.ForeignKey(ElderProfile, on_delete=models.CASCADE, related_name="ai_summaries")
+    conversation = models.ForeignKey(AIConversation, on_delete=models.CASCADE, related_name="summaries")
+    summary = models.TextField()
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    recipients = models.ManyToManyField(FamilyProfile, blank=True, related_name="received_ai_summaries")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    shared_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conversation"],
+                condition=models.Q(status="DRAFT"),
+                name="unique_ai_conversation_draft_summary",
+            )
+        ]
+
+    def __str__(self):
+        return f"Summary for conversation {self.conversation_id} ({self.status})"

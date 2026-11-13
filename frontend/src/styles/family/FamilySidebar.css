@@ -11,7 +11,6 @@
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border-right: 1px solid #e3e7f0;
   overflow: hidden;
   flex-shrink: 0;
   transition:
@@ -82,7 +81,7 @@
 
 .sidebar-nav-link {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -136,6 +135,11 @@
   font-weight: 600;
 }
 
+.sidebar-nav-link:focus-visible {
+  outline: 3px solid #102a56;
+  outline-offset: 2px;
+}
+
 /* =====================================================
    FULL ILLUSTRATION
 ===================================================== */
@@ -148,6 +152,42 @@
   object-position: center bottom;
   margin: 0;
   flex-shrink: 0;
+}
+
+
+/* =====================================================
+   BADGE
+===================================================== */
+
+.sidebar-nav-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  line-height: 1.4;
+}
+
+
+/* =====================================================
+   EMERGENCY SOS LINK
+===================================================== */
+
+.sidebar-nav-link.sidebar-nav-link-sos {
+  color: #dc2626;
+}
+
+.sidebar-nav-link.sidebar-nav-link-sos:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.sidebar-nav-link.sidebar-nav-link-sos.active {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 

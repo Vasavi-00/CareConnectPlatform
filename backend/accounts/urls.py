@@ -25,6 +25,7 @@ from .views import (
     ForgotPasswordView,
     VerifyPasswordResetOTPView,
     ResetPasswordView,
+    SupportMessageView,
 )
 
 
@@ -157,5 +158,10 @@ urlpatterns = [
         "auth/forgot-password/reset/",
         ResetPasswordView.as_view(),
         name="reset-password",
+    ),
+    path(
+        "support/message/",
+        SupportMessageView.as_view(),
+        name="support-message",
     ),
 ]

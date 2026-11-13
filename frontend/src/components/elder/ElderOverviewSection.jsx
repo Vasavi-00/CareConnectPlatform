@@ -14,10 +14,12 @@ import {
   FaTriangleExclamation,
   FaMicrophone,
   FaVolumeHigh,
+  FaVolumeXmark,
+  FaStop,
 } from "react-icons/fa6";
 
-import { takeMedicine, markNotificationRead } from "../../services/api/elderApi";
-import { speakText, stopSpeaking } from "../../services/voice/speechSynthesis";
+import { takeMedicine, markNotificationRead, chatWithAI } from "../../services/api/elderApi";
+import { speakText } from "../../services/voice/speechSynthesis";
 
 const MOOD_OPTIONS = [
   { id: "good", label: "Good", emoji: "😊" },
@@ -38,7 +40,14 @@ export default function ElderOverviewSection({
   onOpenSosModal,
   onRefreshData,
   voiceRemindersEnabled,
+  medicinesVoiceEnabled = true,
+  appointmentsVoiceEnabled = true,
   onEnableVoiceReminders,
+  onToggleVoiceReminders,
+  onToggleMedicineVoiceReminders,
+  onToggleAppointmentVoiceReminders,
+  isSpeechActive = false,
+  onStopVoice,
 }) {
   const navigate = useNavigate();
 
@@ -57,6 +66,8 @@ export default function ElderOverviewSection({
   // AI Companion local state
   const [aiInput, setAiInput] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
   const [aiChat, setAiChat] = useState(() => [
     {
       id: "intro",
@@ -96,7 +107,7 @@ export default function ElderOverviewSection({
   const upcomingAppointments = appointments
     .filter((a) => {
       if (!a?.appointment_at) return false;
-      return new Date(a.appointment_at) >= new Date();
+      return new Date(a.appointment_at) >= new Date() && !["CANCELLED", "CANCELED", "COMPLETED"].includes(a.status);
     })
     .sort((a, b) => new Date(a.appointment_at) - new Date(b.appointment_at));
 
@@ -156,147 +167,191 @@ export default function ElderOverviewSection({
     }
   };
 
-  // AI Response generator with empathetic + care reasoning
-  const handleAiSend = (queryText) => {
+  // AI Response generator with backend Gemini / Ollama LLM integration & empathetic fallback
+  const handleAiSend = async (queryText) => {
     const text = (queryText || aiInput).trim();
-    if (!text) return;
+    if (!text || isAiThinking) return;
 
-    const lower = text.toLowerCase();
-    let reply = "";
-    let offerSos = false;
-    let offerFamilyCall = false;
-
-    if (isTelugu) {
-      if (
-        lower.includes("fall") ||
-        lower.includes("chest") ||
-        lower.includes("pain") ||
-        lower.includes("నొప్పి") ||
-        lower.includes("పడిపోయా") ||
-        lower.includes("ఊపిరి")
-      ) {
-        reply =
-          "ఇది అత్యవసర పరిస్థితి కావచ్చు. దయచేసి వెంటనే ఎమర్జెన్సీ సహాయం తీసుకోండి. నేను మీకోసం ఎమర్జెన్సీ హెల్ప్ ప్రారంభించాలా?";
-        offerSos = true;
-      } else if (
-        lower.includes("lonely") ||
-        lower.includes("sad") ||
-        lower.includes("miss") ||
-        lower.includes("బాధ") ||
-        lower.includes("ఒంటరి")
-      ) {
-        reply =
-          "నేను మీతోనే ఉన్నాను. మీరు ఒంటరిగా ఉండవలసిన అవసరం లేదు. మీ కుటుంబ సభ్యులకు కాల్ చేయడానికి నేను సహాయం చేయాలా?";
-        offerFamilyCall = true;
-      } else if (
-        lower.includes("medicine") ||
-        lower.includes("మందు") ||
-        lower.includes("టాబ్లెట్")
-      ) {
-        reply = nextMedicine
-          ? `మీ తదుపరి మందు ${nextMedicine.name} (${nextMedicine.dosage}). సమయం: ${
-              getMedicineTimes(nextMedicine)
-                ? getMedicineTimes(nextMedicine).split(", ")[0]
-                : "నిర్ణయించబడిన సమయం"
-            }. ${nextMedicine.food_timing || ""}.`
-          : "ప్రస్తుతం మీకు ఎలాంటి షెడ్యూల్డ్ మందులు లేవు.";
-      } else if (
-        lower.includes("appointment") ||
-        lower.includes("డాక్టర్") ||
-        lower.includes("హాస్పిటల్")
-      ) {
-        reply = nextAppointment
-          ? `మీ తదుపరి అపాయింట్‌మెంట్ ${nextAppointment.doctor_name}తో ${new Date(
-              nextAppointment.appointment_at
-            ).toLocaleDateString("te-IN")}లో ఉంది.`
-          : "ప్రస్తుతం మీకు ఎలాంటి అపాయింట్‌మెంట్‌లు లేవు.";
-      } else {
-        reply =
-          "నేను మీ మాట వింటున్నాను. మీ ఆరోగ్యం, మందులు, లేదా కుటుంబం గురించి ఏమైనా అడగండి.";
-      }
-    } else {
-      if (
-        lower.includes("fall") ||
-        lower.includes("fell") ||
-        lower.includes("cannot breathe") ||
-        lower.includes("chest") ||
-        lower.includes("hurt") ||
-        lower.includes("emergency")
-      ) {
-        reply =
-          "This sounds like a potential emergency. Please do not worry, we are right here. Would you like me to activate Emergency Help for you now?";
-        offerSos = true;
-      } else if (
-        lower.includes("lonely") ||
-        lower.includes("alone") ||
-        lower.includes("sad") ||
-        lower.includes("miss") ||
-        lower.includes("bored") ||
-        lower.includes("worried")
-      ) {
-        reply =
-          "I am right here with you. It is completely okay to feel this way. Would you like me to help you connect with your family right now?";
-        offerFamilyCall = true;
-      } else if (
-        lower.includes("medicine") ||
-        lower.includes("pill") ||
-        lower.includes("tablet")
-      ) {
-        reply = nextMedicine
-          ? `Your next medicine is ${nextMedicine.name} (${nextMedicine.dosage}) scheduled for ${
-              getMedicineTimes(nextMedicine)
-                ? getMedicineTimes(nextMedicine).split(", ")[0]
-                : "your regular time"
-            } (${nextMedicine.food_timing || "with water"}).`
-          : "You do not have any pending medicines scheduled right now.";
-      } else if (
-        lower.includes("appointment") ||
-        lower.includes("doctor") ||
-        lower.includes("clinic")
-      ) {
-        reply = nextAppointment
-          ? `Your next appointment is with ${nextAppointment.doctor_name} at ${
-              nextAppointment.clinic_name
-            } on ${new Date(
-              nextAppointment.appointment_at
-            ).toLocaleDateString("en-IN", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })} at ${new Date(nextAppointment.appointment_at).toLocaleTimeString(
-              "en-IN",
-              { hour: "2-digit", minute: "2-digit" }
-            )}.`
-          : "You have no upcoming doctor visits scheduled right now.";
-      } else if (
-        lower.includes("family") ||
-        lower.includes("son") ||
-        lower.includes("daughter") ||
-        lower.includes("call")
-      ) {
-        reply = familyMembers.length
-          ? `You have ${familyMembers.length} family member${
-              familyMembers.length > 1 ? "s" : ""
-            } connected to CareConnect. ${
-              familyMembers[0].family_name || "Your family"
-            } is available to support you.`
-          : "No family members are connected yet. You can ask them to link using your CareConnect ID.";
-        offerFamilyCall = familyMembers.length > 0;
-      } else {
-        reply = `I'm here for you, ${firstName}. We're keeping track of your medicines and appointments. Tell me how you're feeling today, or ask me anything!`;
-      }
-    }
-
-    const newMsgs = [
-      ...aiChat,
-      { id: Date.now(), sender: "elder", text },
-      { id: Date.now() + 1, sender: "ai", text: reply, offerSos, offerFamilyCall },
-    ];
-    setAiChat(newMsgs);
     setAiInput("");
+    const userMsg = { id: Date.now(), sender: "elder", text };
+    setAiChat((prev) => [...prev, userMsg]);
+    setIsAiThinking(true);
 
-    if (profile?.voice_enabled !== false) {
-      speakText(reply, isTelugu ? "te-IN" : "en-IN", profile?.voice_speed || 1);
+    try {
+      const res = await chatWithAI(text, isTelugu ? "Telugu" : "English", conversationId);
+      if (res?.conversation_id) {
+        setConversationId(res.conversation_id);
+      }
+      const reply = res?.reply || (isTelugu ? "నేను మీ మాట వింటున్నాను." : "I am right here with you.");
+      const offerSos = Boolean(res?.offer_sos);
+      const offerFamilyCall = Boolean(res?.offer_family_call);
+
+      const aiMsg = {
+        id: Date.now() + 1,
+        sender: "ai",
+        text: reply,
+        offerSos,
+        offerFamilyCall,
+        familyCallReason: res?.family_call_reason,
+      };
+      setAiChat((prev) => [...prev, aiMsg]);
+
+      if (voiceRemindersEnabled && profile?.voice_enabled !== false) {
+        speakText(reply, isTelugu ? "te-IN" : "en-IN", profile?.voice_speed || 1);
+      }
+    } catch (err) {
+      console.warn("AI Companion API unavailable, using smart client fallback:", err);
+      const lower = text.toLowerCase();
+      let reply = "";
+      let offerSos = false;
+      let offerFamilyCall = false;
+
+      if (isTelugu) {
+        if (
+          lower.includes("fall") ||
+          lower.includes("chest") ||
+          lower.includes("pain") ||
+          lower.includes("నొప్పి") ||
+          lower.includes("పడిపోయా") ||
+          lower.includes("ఊపిరి")
+        ) {
+          reply = "ఇది అత్యవసర పరిస్థితి కావచ్చు. దయచేసి వెంటనే విశ్రాంతి తీసుకోండి. నేను మీకోసం ఎమర్జెన్సీ హెల్ప్ ప్రారంభించాలా?";
+          offerSos = true;
+        } else if (
+          lower.includes("not feel") ||
+          lower.includes("sick") ||
+          lower.includes("బాధ") ||
+          lower.includes("బాగోలేదు")
+        ) {
+          reply = `మీకు ఆరోగ్యం బాగోలేదని విని చాలా బాధగా ఉంది, ${firstName} గారు. దయచేసి కాస్త విశ్రాంతి తీసుకోండి. మీ కుటుంబ సభ్యులకు కాల్ చేయడానికి నేను సహాయం చేయాలా?`;
+          offerFamilyCall = true;
+        } else if (
+          lower.includes("lonely") ||
+          lower.includes("sad") ||
+          lower.includes("ఒంటరి")
+        ) {
+          reply = "నేను మీతోనే ఉన్నాను. మీరు ఒంటరిగా ఉండవలసిన అవసరం లేదు. మీ కుటుంబ సభ్యులకు కాల్ చేయడానికి నేను సహాయం చేయాలా?";
+          offerFamilyCall = true;
+        } else if (
+          lower.includes("medicine") ||
+          lower.includes("మందు") ||
+          lower.includes("టాబ్లెట్")
+        ) {
+          reply = nextMedicine
+            ? `మీ తదుపరి మందు ${nextMedicine.name} (${nextMedicine.dosage}). సమయం: ${
+                getMedicineTimes(nextMedicine)
+                  ? getMedicineTimes(nextMedicine).split(", ")[0]
+                  : "నిర్ణయించబడిన సమయం"
+              }. ${nextMedicine.food_timing || ""}.`
+            : "ప్రస్తుతం మీకు ఎలాంటి షెడ్యూల్డ్ మందులు లేవు.";
+        } else if (
+          lower.includes("appointment") ||
+          lower.includes("డాక్టర్") ||
+          lower.includes("హాస్పిటల్")
+        ) {
+          reply = nextAppointment
+            ? `మీ తదుపరి అపాయింట్‌మెంట్ ${nextAppointment.doctor_name}తో ${new Date(
+                nextAppointment.appointment_at
+              ).toLocaleDateString("te-IN")}లో ఉంది.`
+            : "ప్రస్తుతం మీకు ఎలాంటి అపాయింట్‌మెంట్‌లు లేవు.";
+        } else {
+          reply = `నేను మీతోనే ఉన్నాను, ${firstName} గారు. మీ ఆరోగ్యం, మందులు లేదా కుటుంబం గురించి ఏమైనా అడగండి.`;
+        }
+      } else {
+        if (
+          lower.includes("fall") ||
+          lower.includes("fell") ||
+          lower.includes("cannot breathe") ||
+          lower.includes("chest") ||
+          lower.includes("hurt") ||
+          lower.includes("emergency")
+        ) {
+          reply = "This sounds like a potential emergency. Please do not worry, we are right here. Would you like me to activate Emergency Help for you now?";
+          offerSos = true;
+        } else if (
+          lower.includes("not feel") ||
+          lower.includes("unwell") ||
+          lower.includes("sick") ||
+          lower.includes("pain") ||
+          lower.includes("headache") ||
+          lower.includes("dizzy")
+        ) {
+          reply = `I am so sorry to hear that you are not feeling well, ${firstName}. Please sit down comfortably, drink some water, and rest. Would you like me to connect you with your family?`;
+          offerFamilyCall = true;
+        } else if (
+          lower.includes("lonely") ||
+          lower.includes("alone") ||
+          lower.includes("sad") ||
+          lower.includes("miss") ||
+          lower.includes("bored") ||
+          lower.includes("worried")
+        ) {
+          reply = "I am right here with you. It is completely okay to feel this way. Would you like me to help you connect with your family right now?";
+          offerFamilyCall = true;
+        } else if (
+          lower.includes("medicine") ||
+          lower.includes("pill") ||
+          lower.includes("tablet")
+        ) {
+          reply = nextMedicine
+            ? `Your next medicine is ${nextMedicine.name} (${nextMedicine.dosage}) scheduled for ${
+                getMedicineTimes(nextMedicine)
+                  ? getMedicineTimes(nextMedicine).split(", ")[0]
+                  : "your regular time"
+              } (${nextMedicine.food_timing || "with water"}).`
+            : "You do not have any pending medicines scheduled right now.";
+        } else if (
+          lower.includes("appointment") ||
+          lower.includes("doctor") ||
+          lower.includes("clinic")
+        ) {
+          reply = nextAppointment
+            ? `Your next appointment is with ${nextAppointment.doctor_name} at ${
+                nextAppointment.clinic_name
+              } on ${new Date(
+                nextAppointment.appointment_at
+              ).toLocaleDateString("en-IN", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })} at ${new Date(nextAppointment.appointment_at).toLocaleTimeString(
+                "en-IN",
+                { hour: "2-digit", minute: "2-digit" }
+              )}.`
+            : "You have no upcoming doctor visits scheduled right now.";
+        } else if (
+          lower.includes("family") ||
+          lower.includes("son") ||
+          lower.includes("daughter") ||
+          lower.includes("call")
+        ) {
+          reply = familyMembers.length
+            ? `You have ${familyMembers.length} family member${
+                familyMembers.length > 1 ? "s" : ""
+              } connected to CareConnect. ${
+                familyMembers[0].family_name || "Your family"
+              } is available to support you.`
+            : "No family members are connected yet. You can ask them to link using your CareConnect ID.";
+          offerFamilyCall = familyMembers.length > 0;
+        } else {
+          reply = `I am listening and right here for you, ${firstName}. How else can I help make you comfortable today?`;
+        }
+      }
+
+      const aiMsg = {
+        id: Date.now() + 1,
+        sender: "ai",
+        text: reply,
+        offerSos,
+        offerFamilyCall,
+      };
+      setAiChat((prev) => [...prev, aiMsg]);
+
+      if (voiceRemindersEnabled && profile?.voice_enabled !== false) {
+        speakText(reply, isTelugu ? "te-IN" : "en-IN", profile?.voice_speed || 1);
+      }
+    } finally {
+      setIsAiThinking(false);
     }
   };
 
@@ -350,17 +405,84 @@ export default function ElderOverviewSection({
           <p className="elder-hero-quote">
             “We're here to help you feel safe, healthy and connected.”
           </p>
-          <button
-            type="button"
-            className="elder-voice-reminder-toggle"
-            onClick={onEnableVoiceReminders}
-            aria-pressed={voiceRemindersEnabled}
-          >
-            <FaVolumeHigh /> {voiceRemindersEnabled ? "Voice reminders are on" : "Turn on voice medicine reminders"}
-          </button>
+          <div className="elder-hero-voice-controls">
+            <button
+              type="button"
+              className={`elder-voice-reminder-toggle ${voiceRemindersEnabled ? "active" : "muted"}`}
+              onClick={onToggleVoiceReminders || onEnableVoiceReminders}
+              aria-pressed={voiceRemindersEnabled}
+              title={
+                voiceRemindersEnabled
+                  ? "Master voice notifications are active. Tap to turn OFF."
+                  : "Master voice notifications are turned off. Tap to turn ON."
+              }
+            >
+              {voiceRemindersEnabled ? <FaVolumeHigh /> : <FaVolumeXmark />}
+              <span>
+                {voiceRemindersEnabled
+                  ? "Master Voice: ON"
+                  : "Master Voice: OFF"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`elder-voice-reminder-toggle ${medicinesVoiceEnabled ? "active" : "muted"}`}
+              onClick={onToggleMedicineVoiceReminders}
+              aria-pressed={medicinesVoiceEnabled}
+              title={
+                medicinesVoiceEnabled
+                  ? "Medicine voice reminders are ON. Tap to turn OFF."
+                  : "Medicine voice reminders are OFF. Tap to turn ON."
+              }
+            >
+              <FaPills />
+              <span>
+                {medicinesVoiceEnabled ? "Medicines Voice: ON" : "Medicines Voice: OFF"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`elder-voice-reminder-toggle ${appointmentsVoiceEnabled ? "active" : "muted"}`}
+              onClick={onToggleAppointmentVoiceReminders}
+              aria-pressed={appointmentsVoiceEnabled}
+              title={
+                appointmentsVoiceEnabled
+                  ? "Appointment voice reminders are ON. Tap to turn OFF."
+                  : "Appointment voice reminders are OFF. Tap to turn ON."
+              }
+            >
+              <FaCalendarCheck />
+              <span>
+                {appointmentsVoiceEnabled ? "Appointments Voice: ON" : "Appointments Voice: OFF"}
+              </span>
+            </button>
+
+            {isSpeechActive && (
+              <button
+                type="button"
+                className="elder-hero-stop-voice-btn"
+                onClick={onStopVoice}
+                title="Stop voice speech immediately"
+                aria-label="Stop speaking voice notification"
+              >
+                <FaStop /> Stop Voice
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="elder-hero-leaves">🌿🌿🌿</div>
+        <div className="elder-hero-right-widget">
+          <div className="elder-hero-date-badge">
+            <span className="hero-day">{new Date().toLocaleDateString("en-IN", { weekday: "long" })}</span>
+            <span className="hero-date">{new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</span>
+          </div>
+          <div className="elder-hero-status-pill">
+            <span className="status-live-dot" />
+            <span>Care Connected</span>
+          </div>
+        </div>
       </section>
 
       {/* =====================================================
@@ -489,10 +611,13 @@ export default function ElderOverviewSection({
       {/* =====================================================
           4. MAIN TWO-COLUMN CONTENT GRID
       ===================================================== */}
+      {/* =====================================================
+          4. MAIN TWO-COLUMN CONTENT GRID (BALANCED 2 x 2)
+      ===================================================== */}
       <div className="elder-content-columns">
-        {/* LEFT COLUMN: Medication & SOS */}
+        {/* LEFT COLUMN: Medication & Caregivers */}
         <div className="elder-column">
-          {/* Today's Medicines Card */}
+          {/* Card 1: Today's Medicines */}
           <div className="elder-card today-medicines-card">
             <div className="elder-card-header">
               <div>
@@ -556,8 +681,9 @@ export default function ElderOverviewSection({
                             className="btn-take-medicine"
                             onClick={() => handleTakeMedicine(med)}
                             disabled={takingId === med.id}
+                            title={`Mark ${med.name} as taken`}
                           >
-                            {takingId === med.id ? "Recording..." : "I Took This Medicine"}
+                            <FaCheck /> {takingId === med.id ? "Saving..." : "Take Dose"}
                           </button>
                         )}
                       </div>
@@ -568,98 +694,7 @@ export default function ElderOverviewSection({
             )}
           </div>
 
-          {/* EMERGENCY SOS BANNER CARD */}
-          <div className="elder-card elder-sos-banner-card">
-            <div className="sos-banner-content">
-              <div className="sos-banner-icon">
-                <FaTriangleExclamation />
-              </div>
-              <div className="sos-banner-copy">
-                <h2>EMERGENCY HELP</h2>
-                <p>Tap if you need immediate help or feel unsafe</p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="btn-trigger-emergency"
-              onClick={onOpenSosModal}
-            >
-              🚨 GET EMERGENCY HELP NOW
-            </button>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Appointment, Family & Updates */}
-        <div className="elder-column">
-          {/* Next Appointment Card */}
-          <div className="elder-card appointment-card">
-            <div className="elder-card-header">
-              <div>
-                <span className="card-eyebrow">APPOINTMENT</span>
-                <h2>Next Appointment</h2>
-              </div>
-              <button
-                type="button"
-                className="elder-card-action-btn"
-                onClick={() => navigate("/elder/appointments")}
-              >
-                View Appointment <FaArrowRight />
-              </button>
-            </div>
-
-            {nextAppointment ? (
-              <div className="elder-appointment-display">
-                <div className="appointment-header-row">
-                  <div className="doctor-badge-icon">
-                    <FaCalendarCheck />
-                  </div>
-                  <div>
-                    <h3>{nextAppointment.doctor_name}</h3>
-                    <p>{nextAppointment.clinic_name || "Healthcare Clinic"}</p>
-                  </div>
-                </div>
-
-                <div className="appointment-time-box">
-                  <div className="time-item">
-                    <FaClock />
-                    <span>
-                      {new Date(
-                        nextAppointment.appointment_at
-                      ).toLocaleDateString("en-IN", {
-                        weekday: "long",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                  </div>
-                  <div className="time-item time-highlight">
-                    <span>
-                      {new Date(
-                        nextAppointment.appointment_at
-                      ).toLocaleTimeString("en-IN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                {nextAppointment.reason && (
-                  <p className="appointment-reason">
-                    <strong>Reason:</strong> {nextAppointment.reason}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="elder-empty-box">
-                <FaCalendarCheck />
-                <p>No upcoming appointments scheduled.</p>
-              </div>
-            )}
-          </div>
-
-          {/* My Family Card */}
+          {/* Card 2: Connected Caregivers / My Family */}
           <div className="elder-card family-connect-card">
             <div className="elder-card-header">
               <div>
@@ -724,8 +759,79 @@ export default function ElderOverviewSection({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Important Updates Card */}
+        {/* RIGHT COLUMN: Appointments & Care Updates */}
+        <div className="elder-column">
+          {/* Card 1: Next Appointment */}
+          <div className="elder-card appointment-card">
+            <div className="elder-card-header">
+              <div>
+                <span className="card-eyebrow">APPOINTMENT</span>
+                <h2>Next Appointment</h2>
+              </div>
+              <button
+                type="button"
+                className="elder-card-action-btn"
+                onClick={() => navigate("/elder/appointments")}
+              >
+                View Appointment <FaArrowRight />
+              </button>
+            </div>
+
+            {nextAppointment ? (
+              <div className="elder-appointment-display">
+                <div className="appointment-header-row">
+                  <div className="doctor-badge-icon">
+                    <FaCalendarCheck />
+                  </div>
+                  <div>
+                    <h3>{nextAppointment.doctor_name}</h3>
+                    <p>{nextAppointment.clinic_name || "Healthcare Clinic"}</p>
+                    {nextAppointment.location && <p>{nextAppointment.location}</p>}
+                  </div>
+                </div>
+
+                <div className="appointment-time-box">
+                  <div className="time-item">
+                    <FaClock />
+                    <span>
+                      {new Date(
+                        nextAppointment.appointment_at
+                      ).toLocaleDateString("en-IN", {
+                        weekday: "long",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="time-item time-highlight">
+                    <span>
+                      {new Date(
+                        nextAppointment.appointment_at
+                      ).toLocaleTimeString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {nextAppointment.reason && (
+                  <p className="appointment-reason">
+                    <strong>Reason:</strong> {nextAppointment.reason}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="elder-empty-box">
+                <FaCalendarCheck />
+                <p>No upcoming appointments scheduled.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Card 2: Important Updates Card */}
           <div className="elder-card notifications-recent-card">
             <div className="elder-card-header">
               <div>
@@ -774,6 +880,30 @@ export default function ElderOverviewSection({
           </div>
         </div>
       </div>
+
+      {/* =====================================================
+          5. EMERGENCY SOS BANNER (FULL WIDTH)
+      ===================================================== */}
+      <section className="elder-card elder-sos-banner-card">
+        <div className="sos-banner-content">
+          <div className="sos-banner-icon">
+            <FaTriangleExclamation />
+          </div>
+          <div className="sos-banner-copy">
+            <h2>EMERGENCY ASSISTANCE</h2>
+            <p>Tap if you need immediate help, feel unsafe, or require urgent medical attention.</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="btn-trigger-emergency"
+          onClick={onOpenSosModal}
+          title="Activate Emergency SOS alert"
+        >
+          🚨 GET EMERGENCY HELP NOW
+        </button>
+      </section>
 
       {/* =====================================================
           5. AI COMPANION MAJOR VISUAL SECTION
@@ -851,6 +981,19 @@ export default function ElderOverviewSection({
               </div>
             </div>
           ))}
+
+          {isAiThinking && (
+            <div className="ai-chat-bubble-wrap ai">
+              <div className="ai-bubble ai ai-thinking-bubble">
+                <span className="ai-thinking-dot"></span>
+                <span className="ai-thinking-dot"></span>
+                <span className="ai-thinking-dot"></span>
+                <span className="ai-thinking-text">
+                  {isTelugu ? "ఆలోచిస్తున్నాను..." : "Thinking..."}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Text Fallback Row */}
@@ -861,20 +1004,22 @@ export default function ElderOverviewSection({
             value={aiInput}
             onChange={(e) => setAiInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleAiSend();
+              if (e.key === "Enter" && !isAiThinking) handleAiSend();
             }}
+            disabled={isAiThinking}
             placeholder={
-              isTelugu
-                ? "మీ సందేశాన్ని ఇక్కడ రాయండి..."
-                : "Type your question or thought here..."
+              isAiThinking
+                ? (isTelugu ? "సమాధానం సిద్ధమవుతోంది..." : "Care Companion is thinking...")
+                : (isTelugu ? "మీ సందేశాన్ని ఇక్కడ రాయండి..." : "Type your question or thought here...")
             }
           />
           <button
             type="button"
             className="btn-send-ai"
             onClick={() => handleAiSend()}
+            disabled={isAiThinking || !aiInput.trim()}
           >
-            Send
+            {isAiThinking ? "..." : "Send"}
           </button>
         </div>
 
@@ -882,6 +1027,7 @@ export default function ElderOverviewSection({
         <div className="ai-suggestion-chips">
           <button
             type="button"
+            disabled={isAiThinking}
             onClick={() =>
               handleAiSend(
                 isTelugu
@@ -894,6 +1040,7 @@ export default function ElderOverviewSection({
           </button>
           <button
             type="button"
+            disabled={isAiThinking}
             onClick={() =>
               handleAiSend(
                 isTelugu
@@ -906,6 +1053,7 @@ export default function ElderOverviewSection({
           </button>
           <button
             type="button"
+            disabled={isAiThinking}
             onClick={() =>
               handleAiSend(
                 isTelugu ? "నాకు ఒంటరిగా అనిపిస్తోంది." : "I am feeling lonely."
@@ -916,6 +1064,7 @@ export default function ElderOverviewSection({
           </button>
           <button
             type="button"
+            disabled={isAiThinking}
             onClick={() =>
               handleAiSend(
                 isTelugu

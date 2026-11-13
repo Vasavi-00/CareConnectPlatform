@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -9,6 +10,7 @@ from .models import Notification
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def create_notification(
@@ -234,7 +236,8 @@ def create_appointment_notification(
             f"You have an appointment with "
             f"{appointment.doctor_name} at "
             f"{appointment.clinic_name} "
-            f"on {appointment_time}."
+            f"on {appointment_time}. "
+            f"Location: {appointment.location or 'not provided'}."
         ),
         priority=Notification.Priority.HIGH,
         related_object_type="appointment",
@@ -264,7 +267,8 @@ def create_appointment_updated_notification(
         title=f"Appointment Updated: {appointment.doctor_name}",
         message=(
             f"Your appointment with {appointment.doctor_name} at "
-            f"{appointment.clinic_name} has been updated to {appointment_time}."
+            f"{appointment.clinic_name} has been updated to {appointment_time}. "
+            f"Location: {appointment.location or 'not provided'}."
         ),
         priority=Notification.Priority.HIGH,
         related_object_type="appointment",
@@ -319,7 +323,8 @@ def create_appointment_reminder_notification(
         message=(
             f"Your appointment with {appointment.doctor_name} at "
             f"{appointment.clinic_name} is scheduled for {appointment_time}. "
-            f"It is due in about {reminder_minutes} minutes."
+            f"It is due in about {reminder_minutes} minutes. "
+            f"Location: {appointment.location or 'not provided'}."
         ),
         priority=Notification.Priority.HIGH,
         related_object_type="appointment",
@@ -399,59 +404,6 @@ def send_appointment_reminder_notifications(appointment):
     return notifications
 
 
-def create_ai_summary_notification(
-    *,
-    elder,
-    summary,
-    chat_history=None,
-    max_message_length=2000,
-):
-    """
-    Send an AI conversation summary to connected family members.
-
-    If `chat_history` is provided it will be appended to the notification message
-    (truncated to `max_message_length` characters to avoid oversized notifications).
-    """
-
-    relationships = (
-        FamilyElderRelationship.objects
-        .select_related("family", "family__user")
-        .filter(
-            elder=elder,
-            is_active=True,
-        )
-    )
-
-    # Compose combined message
-    combined = summary or ""
-    if chat_history:
-        combined = combined + "\n\nChat history:\n" + chat_history
-
-    # Truncate to avoid very large notifications
-    if combined and len(combined) > max_message_length:
-        combined = combined[: max_message_length - 3] + "..."
-
-    notifications = []
-
-    for relationship in relationships:
-        notifications.append(
-            create_notification(
-                recipient=relationship.family.user,
-                elder=elder,
-                notification_type=(
-                    Notification.NotificationType.AI_SUMMARY
-                ),
-                title="AI Companion Summary",
-                message=combined,
-                priority=Notification.Priority.NORMAL,
-                related_object_type="ai_summary",
-                related_object_id=None,
-            )
-        )
-
-    return notifications
-
-
 def create_sos_notification(
     *,
     elder,
@@ -474,22 +426,29 @@ def create_sos_notification(
     )
 
     notifications = []
+    failed = 0
+    attempted = relationships.count()
 
     for relationship in relationships:
-        notifications.append(
-            create_notification(
+        try:
+            notification = create_notification(
                 recipient=relationship.family.user,
                 elder=elder,
-                notification_type=(
-                    Notification.NotificationType.SOS
-                ),
+                notification_type=Notification.NotificationType.SOS,
                 title=title,
                 message=message,
                 priority=Notification.Priority.URGENT,
             )
-        )
+            if notification is not None:
+                notifications.append(notification)
+        except Exception:
+            failed += 1
+            logger.exception(
+                "Failed to persist an SOS notification for family user %s",
+                relationship.family.user_id,
+            )
 
-    return notifications
+    return {"notifications": notifications, "attempted": attempted, "failed": failed}
 
 
 def delete_expired_notifications():

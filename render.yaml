@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     rootDir: backend
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    buildCommand: "pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput"
     startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: PYTHON_VERSION
@@ -21,7 +21,31 @@ services:
         value: "https://careconnect-frontend.vercel.app,http://localhost:5173,http://127.0.0.1:5173"
       - key: DATABASE_URL
         value: "sqlite:///tmp/careconnect.db"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_USE_SSL
+        value: "False"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: FRONTEND_URL
+        value: "https://careconnect-frontend.vercel.app"
+      - key: EMERGENCY_SERVICES_PHONE
+        sync: false
+      - key: AI_COMPANION_API_KEY
+        sync: false
+      - key: AI_COMPANION_MODEL
+        value: gpt-4.1-mini
+      - key: AI_COMPANION_TIMEOUT
+        value: "30"
+      - key: AI_COMPANION_CONTEXT_MESSAGES
+        value: "12"

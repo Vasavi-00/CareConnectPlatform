@@ -15,6 +15,11 @@ class Appointment(models.Model):
         max_length=200
     )
 
+    location = models.TextField(
+        blank=True,
+        default="",
+    )
+
     appointment_at = models.DateTimeField()
 
     reason = models.CharField(

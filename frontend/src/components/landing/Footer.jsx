@@ -1,4 +1,5 @@
 import logo from "../../assets/images/logo1.png";
+import { Link } from "react-router-dom";
 
 import {
   FaFacebookF,
@@ -34,21 +35,21 @@ function Footer() {
 
           <div className="social">
 
-            <a href="/">
+            <span aria-hidden="true">
               <FaFacebookF />
-            </a>
+            </span>
 
-            <a href="/">
+            <span aria-hidden="true">
               <FaInstagram />
-            </a>
+            </span>
 
-            <a href="/">
+            <span aria-hidden="true">
               <FaLinkedinIn />
-            </a>
+            </span>
 
-            <a href="/">
+            <span aria-hidden="true">
               <FaXTwitter />
-            </a>
+            </span>
 
           </div>
 
@@ -88,17 +89,13 @@ function Footer() {
             Resources
           </h3>
 
-          <a href="/">
-            Privacy Policy
-          </a>
+          <Link to="/terms">Terms & Conditions</Link>
 
-          <a href="/">
-            Terms & Conditions
-          </a>
+          <Link to="/dashboard/family/settings">Family privacy settings</Link>
 
-          <a href="/">
-            Support
-          </a>
+          <Link to="/login">Sign in</Link>
+
+          <Link to="/dashboard/family/help">Family help</Link>
 
           <a href="#contact">
             Contact
@@ -143,8 +140,7 @@ function Footer() {
 
       <div className="copyright">
 
-        © 2026 CareConnect.
-        All Rights Reserved.
+        © 2026 CareConnect. All Rights Reserved. · <Link to="/terms" style={{ color: "inherit", textDecoration: "underline" }}>Terms & Conditions</Link>
 
       </div>
 

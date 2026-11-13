@@ -235,7 +235,7 @@ If the frontend uses environment variables, create a `.env` file in the frontend
 Example:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
 ```
 
 The API base URL can then be used in the React application.

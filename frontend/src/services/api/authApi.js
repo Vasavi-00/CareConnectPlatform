@@ -1,6 +1,4 @@
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://127.0.0.1:8000/api";
+import { API_BASE_URL } from "./baseUrl.js";
 
 const API_BASE = `${API_BASE_URL}/auth`;
 
@@ -29,12 +27,20 @@ async function apiRequest(endpoint, options = {}) {
             data = JSON.parse(text);
         } catch {
             throw new Error(
-                `Server returned an invalid response (${response.status}).`
+                response.status >= 500
+                    ? "The server could not complete your request. Please try again later."
+                    : "The server returned an unexpected response. Please try again."
             );
         }
     }
 
     if (!response.ok) {
+        if (response.status >= 500) {
+            throw new Error(
+                (data && typeof data === "object" && data.detail) ||
+                "The server could not complete your request. Please try again later."
+            );
+        }
         let message = "Something went wrong.";
 
         if (data && typeof data === "object") {

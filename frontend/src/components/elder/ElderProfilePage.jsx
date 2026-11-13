@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import useSafeBack from "../../hooks/useSafeBack";
 import {
   FaArrowLeft,
-  FaUser,
   FaGear,
   FaCheck,
   FaLanguage,
@@ -10,8 +10,6 @@ import {
   FaGaugeHigh,
   FaTextHeight,
   FaCircleHalfStroke,
-  FaLocationDot,
-  FaPhone,
   FaIdCard,
   FaPen,
   FaXmark,
@@ -21,6 +19,12 @@ import {
 } from "react-icons/fa6";
 
 import { deleteMyAccount, updateElderProfile } from "../../services/api/elderApi";
+import clearCareConnectSession from "../../services/clearSession";
+import useFocusTrap from "../../hooks/useFocusTrap";
+import {
+  getSpeechVoices, getVoiceNotificationSettings, isSpeechSupported, pauseSpeaking,
+  replayLastSpeech, resumeSpeaking, saveVoiceNotificationSettings, speakText, stopSpeaking,
+} from "../../services/voice/speechSynthesis";
 
 export default function ElderProfilePage({
   user,
@@ -28,6 +32,7 @@ export default function ElderProfilePage({
   onProfileUpdated,
 }) {
   const navigate = useNavigate();
+  const goBack = useSafeBack("/elder/dashboard");
 
   const [form, setForm] = useState({
     preferred_language: profile?.preferred_language || "English",
@@ -36,6 +41,9 @@ export default function ElderProfilePage({
     font_size: profile?.font_size || "large",
     high_contrast: profile?.high_contrast ?? false,
   });
+  const [voiceNotificationSettings, setVoiceNotificationSettings] = useState(() => getVoiceNotificationSettings());
+  const [speechVoices, setSpeechVoices] = useState([]);
+  const [voiceTestStatus, setVoiceTestStatus] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -47,6 +55,34 @@ export default function ElderProfilePage({
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const deleteDialogRef = useFocusTrap(showDeleteConfirm, () => setShowDeleteConfirm(false));
+  const profileDialogRef = useFocusTrap(editingProfile);
+
+  useEffect(() => {
+    const language = form.preferred_language === "Telugu" ? "te-IN" : "en-IN";
+    const refresh = () => setSpeechVoices(getSpeechVoices(language));
+    refresh();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.addEventListener?.("voiceschanged", refresh);
+      return () => window.speechSynthesis.removeEventListener?.("voiceschanged", refresh);
+    }
+  }, [form.preferred_language]);
+
+  const updateVoiceNotifications = (change) => {
+    const updated = saveVoiceNotificationSettings(change);
+    setVoiceNotificationSettings(updated);
+  };
+
+  const testVoice = () => {
+    const language = form.preferred_language === "Telugu" ? "te-IN" : "en-IN";
+    const message = form.preferred_language === "Telugu" ? "వాయిస్ సెట్టింగ్ పని చేస్తోంది." : "Your CareConnect voice settings are working.";
+    const started = speakText(message, language, form.voice_speed, (state) => {
+      if (state === "speaking") setVoiceTestStatus("Speaking. Your browser and device control actual playback volume.");
+      else if (state === "error" || state === "unsupported") setVoiceTestStatus("Speech is unavailable. Your notifications and text remain available.");
+      else if (state === "idle") setVoiceTestStatus("Voice test finished.");
+    }, { voiceName: voiceNotificationSettings.voiceName });
+    if (!started) setVoiceTestStatus(isSpeechSupported() ? "Speech could not start. Try again after interacting with the page." : "This browser does not support speech synthesis. Text notifications remain available.");
+  };
 
   useEffect(() => {
     if (profile) {
@@ -113,9 +149,7 @@ export default function ElderProfilePage({
       setDeletingAccount(true);
       setDeleteAccountError("");
       await deleteMyAccount();
-      localStorage.removeItem("careconnect_access");
-      localStorage.removeItem("careconnect_refresh");
-      localStorage.removeItem("careconnect_user");
+      clearCareConnectSession();
       setShowDeleteConfirm(false);
       navigate("/login", { replace: true });
     } catch (err) {
@@ -141,6 +175,7 @@ export default function ElderProfilePage({
       };
 
       const updated = await updateElderProfile(payload);
+      if (!form.voice_enabled) stopSpeaking();
 
       // Save preference keys in localStorage for immediate session persistence
       localStorage.setItem("careconnect_language", form.preferred_language);
@@ -180,7 +215,7 @@ export default function ElderProfilePage({
         <button
           type="button"
           className="elder-back-btn"
-          onClick={() => navigate("/elder/dashboard")}
+          onClick={goBack}
         >
           <FaArrowLeft /> Back to Home
         </button>
@@ -342,6 +377,35 @@ export default function ElderProfilePage({
               </select>
             </div>
 
+            <fieldset className="setting-field elder-voice-notification-settings">
+              <legend><FaVolumeHigh /> Spoken notification settings</legend>
+              <label className="elder-voice-setting-option">
+                <input type="checkbox" checked={voiceNotificationSettings.enabled} disabled={!form.voice_enabled && !voiceNotificationSettings.enabled} onChange={(event) => updateVoiceNotifications({ enabled: event.target.checked })} />
+                <span><strong>Announce new notifications aloud</strong><small>{form.voice_enabled ? "Works while this dashboard is open. Tap Test voice to allow playback if your browser blocks automatic speech." : "Turn on Voice Reading above before enabling spoken notifications."}</small></span>
+              </label>
+              <label className="elder-voice-setting-option">
+                <input type="checkbox" checked={voiceNotificationSettings.readDetails} onChange={(event) => updateVoiceNotifications({ readDetails: event.target.checked })} />
+                <span><strong>Read notification details aloud</strong><small>When off, medicine and appointment alerts are announced without personal details. Family, AI, emergency, and system updates stay private by voice.</small></span>
+              </label>
+              <label className="elder-voice-select-label" htmlFor="notification-voice">
+                <strong>Voice</strong>
+                <select id="notification-voice" value={voiceNotificationSettings.voiceName} onChange={(event) => updateVoiceNotifications({ voiceName: event.target.value })}>
+                  <option value="">Automatic ({form.preferred_language})</option>
+                  {speechVoices.map((voice) => <option key={`${voice.name}-${voice.lang}`} value={voice.name}>{voice.name} ({voice.lang})</option>)}
+                </select>
+                {speechVoices.length === 0 && <small>No matching installed voice was detected. Browser speech may use its default voice or remain unavailable.</small>}
+              </label>
+              <div className="elder-voice-setting-actions">
+                <button type="button" onClick={testVoice}>Test voice</button>
+                <button type="button" onClick={() => { replayLastSpeech(); setVoiceTestStatus("Replaying the last announcement, if one is available."); }}>Replay last announcement</button>
+                <button type="button" onClick={() => { pauseSpeaking(); setVoiceTestStatus("Speech paused where supported by your browser."); }}>Pause speech</button>
+                <button type="button" onClick={() => { resumeSpeaking(); setVoiceTestStatus("Speech resumed where supported by your browser."); }}>Resume speech</button>
+                <button type="button" onClick={() => { stopSpeaking(); setVoiceTestStatus("Speech stopped."); }}>Stop speech</button>
+              </div>
+              {voiceTestStatus && <p role="status" aria-live="polite">{voiceTestStatus}</p>}
+              {!isSpeechSupported() && <p role="status">Speech synthesis is not available in this browser. You can continue using visual notifications.</p>}
+            </fieldset>
+
             {/* Text Size */}
             <div className="setting-field">
               <label>
@@ -411,8 +475,8 @@ export default function ElderProfilePage({
       </section>
 
       {showDeleteConfirm && (
-        <div className="small-confirm-modal-backdrop" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="small-confirm-modal-card" onClick={(event) => event.stopPropagation()}>
+        <div className="small-confirm-modal-backdrop" role="presentation" onClick={() => setShowDeleteConfirm(false)}>
+          <div ref={deleteDialogRef} className="small-confirm-modal-card" role="alertdialog" aria-modal="true" aria-label="Delete account confirmation" onClick={(event) => event.stopPropagation()}>
             <div className="small-confirm-icon"><FaTriangleExclamation /></div>
             <h3>Delete elder account?</h3>
             <p>Permanently delete your elder account and associated care data. This action cannot be undone.</p>
@@ -426,9 +490,9 @@ export default function ElderProfilePage({
       )}
 
       {editingProfile && (
-        <div className="elder-profile-edit-overlay" onClick={() => setEditingProfile(false)}>
-          <form className="elder-profile-edit-modal" onClick={(event) => event.stopPropagation()} onSubmit={savePersonalProfile}>
-            <div className="elder-profile-edit-header"><div><h2>Edit Personal Profile</h2><p>Update the details shared with your care circle.</p></div><button type="button" onClick={() => setEditingProfile(false)} aria-label="Close"><FaXmark /></button></div>
+        <div className="elder-profile-edit-overlay" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) setEditingProfile(false); }}>
+          <form ref={profileDialogRef} className="elder-profile-edit-modal" role="dialog" aria-modal="true" aria-label="Edit personal profile" onClick={(event) => event.stopPropagation()} onSubmit={savePersonalProfile}>
+            <div className="elder-profile-edit-header"><div><h2>Edit Personal Profile</h2><p>Update the details shared with your care circle.</p></div><button type="button" onClick={() => setEditingProfile(false)} aria-label="Close profile form"><FaXmark /></button></div>
             <div className="elder-profile-edit-fields">
               {[["First name", "first_name"], ["Last name", "last_name"], ["Phone", "phone"], ["Date of birth", "date_of_birth"], ["Gender", "gender"], ["Address", "address"], ["City", "city"], ["State", "state"], ["PIN code", "pincode"]].map(([label, key]) => <label className="form-group" key={key}>{label}<input type={key === "date_of_birth" ? "date" : "text"} value={profileForm[key] || ""} onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
               <label className="form-group">Medical notes<textarea value={profileForm.medical_notes || ""} onChange={(event) => setProfileForm((current) => ({ ...current, medical_notes: event.target.value }))} /></label>

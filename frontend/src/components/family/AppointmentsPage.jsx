@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 import {
   getConnectedElders,
@@ -16,7 +17,6 @@ import {
   FaClock,
   FaLocationDot,
   FaPhone,
-  FaVideo,
   FaPenToSquare,
   FaTrash,
   FaTriangleExclamation,
@@ -89,12 +89,15 @@ export default function AppointmentsPage() {
 
   const [formData, setFormData] = useState({
     doctor: "",
-    appointmentType: "General Checkup",
+    clinic: "",
     date: "",
     time: "",
-    mode: "In-person",
     reason: "",
+    location: "",
+    notes: "",
   });
+
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [editingAppointmentId, setEditingAppointmentId] = useState(null);
 
@@ -113,7 +116,7 @@ export default function AppointmentsPage() {
         const data = await getConnectedElders();
 
         const connectedElders = Array.isArray(data)
-          ? data
+          ? data.filter((relationship) => relationship.can_manage_appointments)
           : [];
 
         setElders(connectedElders);
@@ -192,6 +195,7 @@ export default function AppointmentsPage() {
       ...previous,
       [name]: value,
     }));
+    setFieldErrors((previous) => ({ ...previous, [name]: "" }));
   };
 
   // =========================================================
@@ -206,24 +210,23 @@ export default function AppointmentsPage() {
       return;
     }
 
-    if (!formData.doctor) {
-      setMessage("Please select a doctor.");
-      return;
-    }
-
-    if (!formData.date || !formData.time) {
-      setMessage(
-        "Please select appointment date and time."
-      );
-      return;
-    }
+    const errors = {};
+    if (!formData.doctor.trim()) errors.doctor = "Enter the doctor's name.";
+    if (!formData.clinic.trim()) errors.clinic = "Enter a hospital or clinic name.";
+    if (!formData.date) errors.date = "Choose an appointment date.";
+    if (!formData.time) errors.time = "Choose an appointment time.";
+    if (!formData.location.trim()) errors.location = "Enter the appointment address.";
 
     const appointmentDate = new Date(
       `${formData.date}T${formData.time}:00`
     );
 
-    if (Number.isNaN(appointmentDate.getTime()) || appointmentDate <= new Date()) {
-      setMessage("Please select a future appointment date and time.");
+    if (formData.date && formData.time && (Number.isNaN(appointmentDate.getTime()) || appointmentDate <= new Date())) {
+      errors.date = "Choose a future date and time.";
+      errors.time = "Choose a future date and time.";
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -233,12 +236,12 @@ export default function AppointmentsPage() {
 
       const payload = {
         elder_id: Number(selectedElderId),
-        doctor_name: formData.doctor,
-        clinic_name: "CareConnect Clinic",
+        doctor_name: formData.doctor.trim(),
+        clinic_name: formData.clinic.trim(),
         appointment_at: appointmentDate.toISOString(),
-        reason: formData.reason,
-        notes: formData.appointmentType,
-        status: "SCHEDULED",
+        location: formData.location.trim(),
+        reason: formData.reason.trim(),
+        notes: formData.notes.trim(),
       };
 
       if (editingAppointmentId) {
@@ -262,12 +265,14 @@ export default function AppointmentsPage() {
       // Reset form
       setFormData({
         doctor: "",
-        appointmentType: "General Checkup",
+        clinic: "",
         date: "",
         time: "",
-        mode: "In-person",
         reason: "",
+        location: "",
+        notes: "",
       });
+      setFieldErrors({});
 
       setTimeout(() => setMessage(""), 4000);
     } catch (error) {
@@ -290,11 +295,12 @@ export default function AppointmentsPage() {
 
     setFormData({
       doctor: appointment.doctor_name || "",
-      appointmentType: appointment.notes || "General Checkup",
+      clinic: appointment.clinic_name || "",
       date,
       time,
-      mode: appointment.mode || "In-person",
       reason: appointment.reason || "",
+      location: appointment.location || "",
+      notes: appointment.notes || "",
     });
 
     setEditingAppointmentId(appointment.id);
@@ -308,12 +314,14 @@ export default function AppointmentsPage() {
     setEditingAppointmentId(null);
     setFormData({
       doctor: "",
-      appointmentType: "General Checkup",
+      clinic: "",
       date: "",
       time: "",
-      mode: "In-person",
       reason: "",
+      location: "",
+      notes: "",
     });
+    setFieldErrors({});
   };
 
   // =========================================================
@@ -354,6 +362,11 @@ export default function AppointmentsPage() {
     setAppointmentToDelete(null);
   };
 
+  const closeDetails = () => {
+    setShowDetailsModal(false);
+    setAppointmentDetails(null);
+  };
+
   // =========================================================
   // VIEW DETAILS + MARK COMPLETED
   // =========================================================
@@ -363,23 +376,16 @@ export default function AppointmentsPage() {
     setShowDetailsModal(true);
   };
 
+  const deleteDialogRef = useFocusTrap(showDeleteModal, cancelDelete);
+  const detailsDialogRef = useFocusTrap(showDetailsModal, closeDetails);
+
   const markCompleted = async () => {
     if (!appointmentDetails) return;
 
     try {
       setAppointmentError("");
 
-      const payload = {
-        elder_id: appointmentDetails.elder?.id || appointmentDetails.elder_id,
-        doctor_name: appointmentDetails.doctor_name,
-        clinic_name: appointmentDetails.clinic_name || "CareConnect Clinic",
-        appointment_at: appointmentDetails.appointment_at,
-        reason: appointmentDetails.reason,
-        notes: appointmentDetails.notes,
-        status: "COMPLETED",
-      };
-
-      await updateAppointment(appointmentDetails.id, payload);
+      await updateAppointment(appointmentDetails.id, { status: "COMPLETED" });
 
       const updatedAppointments = await getAppointments(selectedElderId);
       setAppointments(Array.isArray(updatedAppointments) ? updatedAppointments : []);
@@ -395,15 +401,6 @@ export default function AppointmentsPage() {
     }
   };
 
-  // =========================================================
-  // SELECTED ELDER
-  // =========================================================
-
-  const selectedElder = elders.find(
-    (elder) =>
-      String(elder.elder) ===
-      String(selectedElderId)
-  );
 
   // =========================================================
   // APPOINTMENT FILTERING
@@ -418,7 +415,7 @@ export default function AppointmentsPage() {
 
       return (
         appointmentDate >= now &&
-        appointment.status !== "CANCELLED"
+        !["CANCELLED", "CANCELED", "COMPLETED"].includes(appointment.status)
       );
     });
 
@@ -429,7 +426,7 @@ export default function AppointmentsPage() {
 
       return (
         appointmentDate < now ||
-        appointment.status === "COMPLETED"
+        ["CANCELLED", "CANCELED", "COMPLETED"].includes(appointment.status)
       );
     });
 
@@ -622,77 +619,26 @@ export default function AppointmentsPage() {
                 Doctor / Specialist
               </label>
 
-              <select
+              <input
                 id="doctor"
+                type="text"
                 name="doctor"
                 value={formData.doctor}
                 onChange={handleChange}
+                maxLength={150}
+                placeholder="Enter doctor's full name"
                 required
-              >
-
-                <option value="">
-                  Select a doctor
-                </option>
-
-                <option value="Dr. Mehta">
-                  Dr. Mehta — Physician
-                </option>
-
-                <option value="Dr. Ramesh">
-                  Dr. Ramesh — Ophthalmologist
-                </option>
-
-                <option value="Dr. Sara">
-                  Dr. Sara — Dentist
-                </option>
-
-                <option value="Dr. Rao">
-                  Dr. Rao — General Physician
-                </option>
-
-              </select>
+                aria-invalid={Boolean(fieldErrors.doctor)}
+                aria-describedby={fieldErrors.doctor ? "doctor-error" : undefined}
+              />
+              {fieldErrors.doctor && <small className="appointment-field-error" id="doctor-error">{fieldErrors.doctor}</small>}
 
             </div>
 
-            {/* =========================================
-                APPOINTMENT TYPE
-            ========================================= */}
-
             <div className="form-group">
-
-              <label htmlFor="appointmentType">
-                Appointment Type
-              </label>
-
-              <select
-                id="appointmentType"
-                name="appointmentType"
-                value={formData.appointmentType}
-                onChange={handleChange}
-              >
-
-                <option value="General Checkup">
-                  General Checkup
-                </option>
-
-                <option value="Eye Checkup">
-                  Eye Checkup
-                </option>
-
-                <option value="Dental Checkup">
-                  Dental Checkup
-                </option>
-
-                <option value="Medicine Review">
-                  Medicine Review
-                </option>
-
-                <option value="Follow-up Visit">
-                  Follow-up Visit
-                </option>
-
-              </select>
-
+              <label htmlFor="clinic">Hospital / Clinic Name</label>
+              <input id="clinic" type="text" name="clinic" value={formData.clinic} onChange={handleChange} maxLength={200} placeholder="Enter hospital or clinic name" required aria-invalid={Boolean(fieldErrors.clinic)} aria-describedby={fieldErrors.clinic ? "clinic-error" : undefined} />
+              {fieldErrors.clinic && <small className="appointment-field-error" id="clinic-error">{fieldErrors.clinic}</small>}
             </div>
 
             {/* =========================================
@@ -713,7 +659,10 @@ export default function AppointmentsPage() {
                 min={getLocalDateInputValue()}
                 onChange={handleChange}
                 required
+                aria-invalid={Boolean(fieldErrors.date)}
+                aria-describedby={fieldErrors.date ? "date-error" : undefined}
               />
+              {fieldErrors.date && <small className="appointment-field-error" id="date-error">{fieldErrors.date}</small>}
 
             </div>
 
@@ -734,77 +683,16 @@ export default function AppointmentsPage() {
                 value={formData.time}
                 onChange={handleChange}
                 required
+                aria-invalid={Boolean(fieldErrors.time)}
+                aria-describedby={fieldErrors.time ? "time-error" : undefined}
               />
+              {fieldErrors.time && <small className="appointment-field-error" id="time-error">{fieldErrors.time}</small>}
 
             </div>
-
-            {/* =========================================
-                MODE
-            ========================================= */}
-
-            <div className="form-group">
-
-              <label>
-                Consultation Mode
-              </label>
-
-              <div className="mode-options">
-
-                <label
-                  className={`mode-option ${
-                    formData.mode === "In-person"
-                      ? "selected"
-                      : ""
-                  }`}
-                >
-
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="In-person"
-                    checked={
-                      formData.mode ===
-                      "In-person"
-                    }
-                    onChange={handleChange}
-                  />
-
-                  <FaLocationDot />
-
-                  <span>
-                    In-person
-                  </span>
-
-                </label>
-
-                <label
-                  className={`mode-option ${
-                    formData.mode === "Video"
-                      ? "selected"
-                      : ""
-                  }`}
-                >
-
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="Video"
-                    checked={
-                      formData.mode === "Video"
-                    }
-                    onChange={handleChange}
-                  />
-
-                  <FaVideo />
-
-                  <span>
-                    Video Call
-                  </span>
-
-                </label>
-
-              </div>
-
+            <div className="form-group full-width">
+              <label htmlFor="location">Appointment Location / Full Address</label>
+              <textarea id="location" name="location" value={formData.location} onChange={handleChange} maxLength={1000} placeholder="Enter the complete hospital or clinic address" rows="3" required aria-invalid={Boolean(fieldErrors.location)} aria-describedby={fieldErrors.location ? "location-error" : undefined} />
+              {fieldErrors.location && <small className="appointment-field-error" id="location-error">{fieldErrors.location}</small>}
             </div>
 
             {/* =========================================
@@ -813,19 +701,22 @@ export default function AppointmentsPage() {
 
             <div className="form-group full-width">
 
-              <label htmlFor="reason">
-                Reason / Notes
-              </label>
+              <label htmlFor="reason">Reason for Appointment (optional)</label>
 
               <textarea
                 id="reason"
                 name="reason"
                 value={formData.reason}
                 onChange={handleChange}
-                placeholder="Add any symptoms, concerns, or notes..."
+                placeholder="For example, routine check-up or consultation"
                 rows="3"
               />
 
+            </div>
+
+            <div className="form-group full-width">
+              <label htmlFor="notes">Additional Notes (optional)</label>
+              <textarea id="notes" name="notes" value={formData.notes} onChange={handleChange} placeholder="Add anything else the family or elder should know" rows="3" />
             </div>
 
             {/* =========================================
@@ -1093,6 +984,7 @@ export default function AppointmentsPage() {
                         appointment.appointment_at
                       )}
                     </p>
+                    <p><FaLocationDot /> {appointment.clinic_name}{appointment.location ? ` - ${appointment.location}` : ""}</p>
 
                   </div>
 
@@ -1207,6 +1099,7 @@ export default function AppointmentsPage() {
                     <p>
                       {appointment.doctor_name}
                     </p>
+                    <p>{appointment.clinic_name}{appointment.location ? ` - ${appointment.location}` : ""}</p>
 
                     <span>
                       {getFullDate(
@@ -1218,10 +1111,7 @@ export default function AppointmentsPage() {
 
                   <span className="completed-badge">
 
-                    {appointment.status ===
-                    "COMPLETED"
-                      ? "Completed"
-                      : "Past"}
+                    {appointment.status === "COMPLETED" ? "Completed" : ["CANCELLED", "CANCELED"].includes(appointment.status) ? "Cancelled" : "Past"}
 
                   </span>
 
@@ -1238,13 +1128,13 @@ export default function AppointmentsPage() {
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (
-        <div className="small-confirm-modal-backdrop" onClick={cancelDelete}>
-          <div className="small-confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="small-confirm-modal-backdrop" role="presentation" onClick={cancelDelete}>
+          <div ref={deleteDialogRef} className="small-confirm-modal-card" role="alertdialog" aria-modal="true" aria-label="Cancel appointment confirmation" onClick={(e) => e.stopPropagation()}>
             <div className="small-confirm-icon">
               <FaTriangleExclamation />
             </div>
             <h3>Cancel appointment?</h3>
-            <p>Are you sure you want to cancel this appointment? This action cannot be undone.</p>
+            <p>This marks the appointment as cancelled and keeps it in the appointment history.</p>
             {appointmentError && <div className="appointment-error">{appointmentError}</div>}
             <div className="small-confirm-actions">
               <button type="button" className="small-confirm-secondary" onClick={cancelDelete}>Keep</button>
@@ -1255,18 +1145,20 @@ export default function AppointmentsPage() {
       )}
 
       {showDetailsModal && appointmentDetails && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
+        <div className="modal-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) closeDetails(); }}>
+          <div ref={detailsDialogRef} className="modal-card" role="dialog" aria-modal="true" aria-label="Appointment details">
             <h3>Appointment details</h3>
             <p><strong>Doctor:</strong> {appointmentDetails.doctor_name}</p>
+            <p><strong>Hospital / clinic:</strong> {appointmentDetails.clinic_name}</p>
             <p><strong>When:</strong> {getFullDate(appointmentDetails.appointment_at)}</p>
-            <p><strong>Reason:</strong> {appointmentDetails.reason}</p>
-            <p><strong>Notes:</strong> {appointmentDetails.notes}</p>
+            <p><strong>Address:</strong> {appointmentDetails.location || "Not provided"}</p>
+            {appointmentDetails.reason && <p><strong>Reason:</strong> {appointmentDetails.reason}</p>}
+            {appointmentDetails.notes && <p><strong>Notes:</strong> {appointmentDetails.notes}</p>}
             <p><strong>Status:</strong> {appointmentDetails.status}</p>
             {appointmentError && <div className="appointment-error">{appointmentError}</div>}
             <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={() => { setShowDetailsModal(false); setAppointmentDetails(null); }}>Close</button>
-              {appointmentDetails.status !== "COMPLETED" && (
+              <button type="button" className="btn-secondary" onClick={closeDetails}>Close</button>
+              {!['COMPLETED', 'CANCELLED', 'CANCELED'].includes(appointmentDetails.status) && (
                 <button type="button" className="btn-primary" onClick={markCompleted}>Mark completed</button>
               )}
             </div>

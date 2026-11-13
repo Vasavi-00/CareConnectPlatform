@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useSafeBack from "../../hooks/useSafeBack";
 import {
   FaArrowLeft,
   FaBell,
@@ -15,16 +16,23 @@ import {
 import {
   markNotificationRead,
   markAllNotificationsRead,
+  getAISummaries,
 } from "../../services/api/elderApi";
-import { speakText } from "../../services/voice/speechSynthesis";
+import {
+  getVoiceNotificationSettings, notificationAnnouncementText, speakText,
+} from "../../services/voice/speechSynthesis";
 
 export default function ElderNotificationsPage({
   notifications = [],
+  appointments = [],
   profile,
   onRefreshNotifications,
 }) {
+  const goBack = useSafeBack("/elder/dashboard");
   const navigate = useNavigate();
   const [filter, setFilter] = useState("all"); // 'all' | 'unread'
+  const [readingSummaryId, setReadingSummaryId] = useState(null);
+  const [summarySpeechStatus, setSummarySpeechStatus] = useState("");
 
   const isTelugu = profile?.preferred_language === "Telugu";
 
@@ -51,8 +59,37 @@ export default function ElderNotificationsPage({
   };
 
   const handleReadAloud = (item) => {
-    const text = `${item.title}. ${item.message}`;
-    speakText(text, isTelugu ? "te-IN" : "en-IN", profile?.voice_speed || 1);
+    const settings = getVoiceNotificationSettings();
+    const appointment = item.related_object_type === "appointment"
+      ? appointments.find((record) => String(record.id) === String(item.related_object_id))
+      : null;
+    const text = notificationAnnouncementText(item, isTelugu ? "Telugu" : "English", settings.readDetails, appointment);
+    speakText(text, isTelugu ? "te-IN" : "en-IN", profile?.voice_speed || 1, undefined, { voiceName: settings.voiceName, rememberAsLast: true });
+  };
+
+  const handleReadPrivateUpdate = async (summaryId) => {
+    if (readingSummaryId) return;
+    setReadingSummaryId(summaryId);
+    setSummarySpeechStatus("");
+    try {
+      const summaries = await getAISummaries();
+      const summary = summaries.find((item) => String(item.id) === String(summaryId) && item.status === "SHARED");
+      if (!summary?.summary) {
+        setSummarySpeechStatus("This private update is no longer available to read.");
+        return;
+      }
+      const started = speakText(summary.summary, isTelugu ? "te-IN" : "en-IN", profile?.voice_speed || 1, (state) => {
+        if (state === "speaking") setSummarySpeechStatus("Reading the private update aloud.");
+        else if (state === "error" || state === "unsupported") setSummarySpeechStatus("Speech is unavailable. The update is still available on screen.");
+        else if (state === "idle") setSummarySpeechStatus("Finished reading the update.");
+        else if (state === "stopped") setSummarySpeechStatus("Speech stopped.");
+      }, { rememberAsLast: true });
+      if (!started) setSummarySpeechStatus("Speech is unavailable. The update is still available on screen.");
+    } catch (error) {
+      setSummarySpeechStatus(error?.message || "Could not load the private update.");
+    } finally {
+      setReadingSummaryId(null);
+    }
   };
 
   const filtered =
@@ -81,7 +118,7 @@ export default function ElderNotificationsPage({
         <button
           type="button"
           className="elder-back-btn"
-          onClick={() => navigate("/elder/dashboard")}
+          onClick={goBack}
         >
           <FaArrowLeft /> Back to Home
         </button>
@@ -179,6 +216,18 @@ export default function ElderNotificationsPage({
                   <FaVolumeHigh /> Listen
                 </button>
 
+                {item.notification_type === "MEDICINE" && (
+                  <button type="button" className="btn-read-toggle" onClick={() => navigate("/elder/medicines")}>Open medicine schedule</button>
+                )}
+                {item.notification_type === "APPOINTMENT" && (
+                  <button type="button" className="btn-read-toggle" onClick={() => navigate("/elder/appointments")}>Open appointments</button>
+                )}
+                {item.notification_type === "AI_SUMMARY" && Number.isInteger(item.data?.summary_id) && (
+                  <button type="button" className="btn-read-toggle" disabled={readingSummaryId === item.data.summary_id} onClick={() => handleReadPrivateUpdate(item.data.summary_id)}>
+                    {readingSummaryId === item.data.summary_id ? "Loading update…" : "Read private update aloud"}
+                  </button>
+                )}
+
                 {!item.is_read && (
                   <button
                     type="button"
@@ -193,6 +242,7 @@ export default function ElderNotificationsPage({
           ))}
         </div>
       )}
+      {summarySpeechStatus && <p className="elder-card" role="status" aria-live="polite">{summarySpeechStatus}</p>}
     </div>
   );
 }

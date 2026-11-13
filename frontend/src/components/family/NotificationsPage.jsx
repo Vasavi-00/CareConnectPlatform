@@ -10,7 +10,7 @@ import {
   FaFilter,
 } from "react-icons/fa6";
 
-import { getNotifications, markNotificationRead } from "../../services/api/familyApi";
+import { getNotifications, getSOSEvents, markNotificationRead, updateSOSEvent } from "../../services/api/familyApi";
 import "../../styles/family/NotificationsPage.css";
 
 export default function NotificationsPage({ selectedElder }) {
@@ -18,13 +18,16 @@ export default function NotificationsPage({ selectedElder }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sosEvents, setSosEvents] = useState([]);
 
   const loadNotifications = async () => {
     try {
       setError("");
       const rows = await getNotifications();
+      const events = await getSOSEvents();
       const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
       const visible = elderId ? rows.filter((item) => !item.elder || String(item.elder.id) === String(elderId)) : [];
+      setSosEvents(elderId ? events.filter((item) => String(item.elder_id) === String(elderId)) : events);
       setNotifications(visible.map((item) => {
         const type = item.notification_type === "MEDICINE" ? "medicine" : item.notification_type === "APPOINTMENT" ? "appointment" : item.notification_type === "AI_SUMMARY" ? "ai" : item.notification_type === "SOS" ? "emergency" : "system";
         const category = type === "medicine" ? "Medicine" : type === "appointment" ? "Appointments" : type === "ai" ? "AI Companion" : type === "emergency" ? "Alerts" : "System";
@@ -48,6 +51,13 @@ export default function NotificationsPage({ selectedElder }) {
   const markAllAsRead = async () => {
     try { await Promise.all(notifications.filter((item) => item.unread).map((item) => markNotificationRead(item.id))); setNotifications((prev) => prev.map((item) => ({ ...item, unread: false, is_read: true }))); }
     catch (err) { setError(err.message || "Unable to update notifications."); }
+  };
+
+  const updateSos = async (id, action) => {
+    try {
+      const updated = await updateSOSEvent(id, action);
+      setSosEvents((previous) => previous.map((event) => event.id === id ? updated : event));
+    } catch (err) { setError(err.message || "Unable to update emergency alert."); }
   };
 
   return (
@@ -167,6 +177,30 @@ export default function NotificationsPage({ selectedElder }) {
 
 
       {/* Notifications List */}
+      <section className="notifications-list-card">
+        <div className="notifications-list-header"><div><h2>Emergency SOS alerts</h2><p>Alerts for elders you are authorized to support</p></div></div>
+        {loading ? <div className="notifications-empty">Loading emergency alerts…</div> : sosEvents.length === 0 ? <div className="notifications-empty">No emergency events found.</div> : (
+          <div className="full-notification-list">
+            {sosEvents.map((event) => (
+              <article className="full-notification-item" key={event.id}>
+                <div className="full-notification-icon emergency"><FaTriangleExclamation /></div>
+                <div className="full-notification-content">
+                  <h3>{event.elder_name} — Emergency SOS</h3>
+                  <p>{new Date(event.created_at).toLocaleString()} · {event.location_available ? `Location ${event.latitude}, ${event.longitude}${event.accuracy != null ? ` (±${event.accuracy} m)` : ""}` : "Location unavailable"}</p>
+                  <p>In-app alert status: {event.notification_status === "SENT" ? `saved for ${event.notification_recipient_count} family member(s)` : event.notification_status.toLowerCase()}</p>
+                  {event.maps_url && <a href={event.maps_url} target="_blank" rel="noreferrer">Open location in Google Maps</a>}
+                  <div className="full-notification-meta"><span>{event.status}</span>{event.acknowledged_at && <small>Acknowledged {new Date(event.acknowledged_at).toLocaleString()}</small>}</div>
+                  <div className="sos-modal-btn-row">
+                    {!event.acknowledged_at && <button type="button" onClick={() => updateSos(event.id, "acknowledge")}>Acknowledge</button>}
+                    {event.status !== "RESOLVED" && <button type="button" onClick={() => updateSos(event.id, "resolve")}>Mark resolved</button>}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="notifications-list-card">
 
         <div className="notifications-list-header">

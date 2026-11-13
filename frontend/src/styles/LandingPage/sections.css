@@ -488,7 +488,7 @@
     margin-top:25px;
 }
 
-.social a{
+.social > span{
     width:42px;
     height:42px;
     border-radius:50%;

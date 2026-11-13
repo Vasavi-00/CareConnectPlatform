@@ -14,12 +14,12 @@ import {
   FaSun,
   FaCloudSun,
   FaMoon,
-  FaCheck,
   FaCircle,
   FaXmark,
 } from "react-icons/fa6";
 
 import { createMedicine, deleteMedicine as removeMedicine, getMedicines, updateMedicine } from "../../services/api/familyApi";
+import useFocusTrap from "../../hooks/useFocusTrap";
 import "../../styles/family/MedicinePage.css";
 
 const getMedicineStock = (item) => {
@@ -60,6 +60,11 @@ export default function MedicinePage({ selectedElder }) {
   const [error, setError] = useState("");
   const [medicineToDelete, setMedicineToDelete] = useState(null);
   const [showDeleteMedicineModal, setShowDeleteMedicineModal] = useState(false);
+
+  const closeDeleteMedicineDialog = () => {
+    setShowDeleteMedicineModal(false);
+    setMedicineToDelete(null);
+  };
 
   useEffect(() => {
     let active = true;
@@ -259,6 +264,9 @@ export default function MedicinePage({ selectedElder }) {
     });
     setIntakeSlots([createIntakeSlot()]);
   };
+
+  const deleteDialogRef = useFocusTrap(showDeleteMedicineModal, closeDeleteMedicineDialog);
+  const medicineDialogRef = useFocusTrap(canManageMedicines && showAddMedicine);
 
   const removeIntakeSlot = (index) => {
     setIntakeSlots((prev) => {
@@ -852,15 +860,15 @@ export default function MedicinePage({ selectedElder }) {
       ===================================== */}
 
       {showDeleteMedicineModal && medicineToDelete && (
-        <div className="small-confirm-modal-backdrop" onClick={() => { setShowDeleteMedicineModal(false); setMedicineToDelete(null); }}>
-          <div className="small-confirm-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="small-confirm-modal-backdrop" role="presentation" onClick={closeDeleteMedicineDialog}>
+          <div ref={deleteDialogRef} className="small-confirm-modal-card" role="alertdialog" aria-modal="true" aria-label="Delete medicine confirmation" onClick={(e) => e.stopPropagation()}>
             <div className="small-confirm-icon">
               <FaTriangleExclamation />
             </div>
             <h3>Delete medicine?</h3>
             <p>Delete <strong>{medicineToDelete.name}</strong>? This action cannot be undone.</p>
             <div className="small-confirm-actions">
-              <button type="button" className="small-confirm-secondary" onClick={() => { setShowDeleteMedicineModal(false); setMedicineToDelete(null); }}>Keep</button>
+              <button type="button" className="small-confirm-secondary" onClick={closeDeleteMedicineDialog}>Keep</button>
               <button type="button" className="small-confirm-danger" onClick={deleteMedicine}>Delete</button>
             </div>
           </div>
@@ -871,11 +879,16 @@ export default function MedicinePage({ selectedElder }) {
 
         <div
           className="medicine-modal-overlay"
-          onClick={closeMedicineForm}
+          role="presentation"
+          onClick={(event) => { if (event.target === event.currentTarget) closeMedicineForm(); }}
         >
 
           <div
+            ref={medicineDialogRef}
             className="medicine-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingMedicine ? "Edit medicine" : "Add medicine"}
             onClick={(e) => e.stopPropagation()}
           >
 
@@ -893,6 +906,8 @@ export default function MedicinePage({ selectedElder }) {
               </div>
 
               <button
+                type="button"
+                aria-label="Close medicine form"
                 onClick={closeMedicineForm}
               >
                 <FaXmark />

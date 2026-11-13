@@ -1,4 +1,5 @@
 from django.db import transaction
+import logging
 from django.utils import timezone
 
 from rest_framework import status
@@ -17,6 +18,9 @@ from .models import (
     PasswordResetOTP,
 )
 
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives, send_mail
+
 from .serializers import (
     SignupSerializer,
     LoginSerializer,
@@ -30,12 +34,16 @@ from .serializers import (
     ForgotPasswordSerializer,
     VerifyPasswordResetOTPSerializer,
     ResetPasswordSerializer,
+    SupportMessageSerializer,
 )
 
 from .utils import (
     create_password_reset_otp,
     send_password_reset_otp,
+    validate_email_configuration,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -1282,7 +1290,23 @@ class ForgotPasswordView(APIView):
             raise_exception=True
         )
 
-        email = serializer.validated_data["email"]
+        email = serializer.validated_data["email"].strip().lower()
+
+        # ----------------------------------------------------
+        # SERVICE CONFIGURATION CHECK
+        #
+        # Validate that the email service is ready before proceeding.
+        # Both registered and unregistered emails receive 503 if unconfigured.
+        # ----------------------------------------------------
+        is_configured, reason = validate_email_configuration()
+        if not is_configured:
+            logger.error("Password reset email service is not configured: %s", reason)
+            return Response(
+                {
+                    "detail": "Password reset service is temporarily unavailable. Please try again later."
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         # ----------------------------------------------------
         # SECURITY
@@ -1293,46 +1317,45 @@ class ForgotPasswordView(APIView):
         try:
 
             user = User.objects.get(
-                email=email
+                email__iexact=email
             )
 
         except User.DoesNotExist:
 
+            logger.info("Password reset requested for unregistered email.")
             return Response(
                 {
-                    "message": (
-                        "If an account exists with this "
-                        "email, a verification code "
-                        "has been sent."
-                    )
+                    "message": "We cannot confirm email delivery. If this address belongs to an account, a verification code may arrive shortly. Please check your inbox and spam folder."
                 },
                 status=status.HTTP_200_OK
             )
 
         # ----------------------------------------------------
-        # CREATE OTP
+        # CREATE OTP & SEND EMAIL
         # ----------------------------------------------------
 
-        password_reset_otp = (
-            create_password_reset_otp(user)
-        )
-
-        # ----------------------------------------------------
-        # SEND OTP
-        # ----------------------------------------------------
-
-        send_password_reset_otp(
-            user,
-            password_reset_otp.otp
-        )
+        password_reset_otp = None
+        try:
+            password_reset_otp = create_password_reset_otp(user)
+            send_password_reset_otp(user, password_reset_otp.otp)
+        except Exception as exc:
+            # Do not leave an OTP active if the user could not receive it.
+            if password_reset_otp is not None:
+                try:
+                    password_reset_otp.delete()
+                except Exception:
+                    logger.exception("Could not remove an undelivered password reset code")
+            logger.error("Failed to deliver password reset email for user id %s: %s", user.pk, exc, exc_info=True)
+            return Response(
+                {
+                    "detail": "Failed to send password reset email. Please try again later."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(
             {
-                "message": (
-                    "If an account exists with this "
-                    "email, a verification code "
-                    "has been sent."
-                )
+                "message": "We cannot confirm email delivery. If this address belongs to an account, a verification code may arrive shortly. Please check your inbox and spam folder."
             },
             status=status.HTTP_200_OK
         )
@@ -1451,6 +1474,18 @@ class VerifyPasswordResetOTPView(APIView):
         if otp_record.otp != otp:
 
             otp_record.attempts += 1
+
+            if otp_record.attempts >= 5:
+                otp_record.delete()
+                return Response(
+                    {
+                        "detail": (
+                            "Too many incorrect attempts. "
+                            "Please request a new OTP."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             otp_record.save(
                 update_fields=[
@@ -1584,3 +1619,111 @@ class ResetPasswordView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+# ============================================================
+# SUPPORT MESSAGE
+# ============================================================
+
+class SupportMessageView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        serializer = SupportMessageSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        name = serializer.validated_data["name"]
+        user_email = serializer.validated_data["email"].strip().lower()
+        message = serializer.validated_data["message"]
+
+        support_destination = (
+            getattr(settings, "DEFAULT_FROM_EMAIL", "").strip()
+            or getattr(settings, "EMAIL_HOST_USER", "").strip()
+            or "careconnect.project.monolith@gmail.com"
+        )
+
+        subject = f"CareConnect Support Request from {name}"
+        text_body = f"""Hello Support Team,
+
+You received a new inquiry from CareConnect:
+
+Name: {name}
+Email: {user_email}
+
+Message:
+{message}
+"""
+
+        html_body = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 28px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <div style="margin-bottom: 20px;">
+                <span style="font-size: 22px; font-weight: 700; color: #0284c7;">CareConnect Support</span>
+            </div>
+            <h2 style="font-size: 18px; color: #0f172a; margin-top: 0;">New Support Request</h2>
+            <p style="font-size: 14px; color: #334155; margin-bottom: 6px;"><strong>From:</strong> {name}</p>
+            <p style="font-size: 14px; color: #334155; margin-bottom: 16px;"><strong>Email:</strong> <a href="mailto:{user_email}">{user_email}</a></p>
+            <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 16px; margin: 20px 0; border-radius: 4px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #1e293b;">
+{message}
+            </div>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">Reply directly to this email to respond to {name} ({user_email}).</p>
+        </div>
+        """
+
+        try:
+            email_msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_body,
+                from_email=settings.DEFAULT_FROM_EMAIL or support_destination,
+                to=[support_destination],
+                reply_to=[user_email],
+            )
+            email_msg.attach_alternative(html_body, "text/html")
+            email_msg.send(fail_silently=False)
+        except Exception as exc:
+            logger.exception("Failed to dispatch support message email: %s", exc)
+            return Response(
+                {
+                    "detail": "Failed to send your support message. Please try again or email us directly."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Send auto-acknowledgement to the sender
+        try:
+            ack_subject = "We received your CareConnect support request"
+            ack_text = f"""Hello {name},
+
+Thank you for contacting CareConnect Support! We have received your inquiry:
+
+\"{message}\"
+
+Our support team reviews messages Monday through Saturday (9:00 AM – 7:00 PM IST) and will respond to you shortly.
+
+Warm regards,
+CareConnect Support Team
+"""
+            send_mail(
+                subject=ack_subject,
+                message=ack_text,
+                from_email=settings.DEFAULT_FROM_EMAIL or support_destination,
+                recipient_list=[user_email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+        return Response(
+            {
+                "message": "Your message has been sent successfully! Our support team will get back to you shortly."
+            },
+            status=status.HTTP_200_OK,
+        )
+

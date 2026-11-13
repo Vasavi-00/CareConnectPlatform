@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import React, { useState } from "react";
 import {
   FaCircleQuestion,
@@ -14,13 +15,16 @@ import {
   FaCircleInfo,
 } from "react-icons/fa6";
 
+import { sendSupportMessage } from "../../services/api/familyApi";
 import "../../styles/family/HelpPage.css";
 
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
   const [supportError, setSupportError] = useState("");
-  const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || "";
+  const [supportSuccess, setSupportSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+  const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || "careconnect.project.monolith@gmail.com";
   const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || "";
 
   const [form, setForm] = useState({
@@ -60,6 +64,13 @@ export default function HelpPage() {
       answer:
         "Yes. Open Parent Profile and use Edit Profile or Update in the relevant section to change personal, medical and care information.",
     },
+    {
+      question: "Where can I review CareConnect's Terms & Conditions and Medical Disclaimer?",
+      answer:
+        "You can review our full Terms and Conditions, Medical & Emergency Disclaimers, and Privacy Safeguards anytime on our dedicated Terms & Conditions page.",
+      link: "/terms",
+      linkText: "Read Terms & Conditions",
+    },
   ];
 
   const filteredFaqs = faqs.filter((faq) => {
@@ -84,17 +95,49 @@ export default function HelpPage() {
     }));
 
     setSupportError("");
+    setSupportSuccess("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!supportEmail) {
-      setSupportError("Support email is not configured. Please contact your CareConnect administrator.");
+    setSupportError("");
+    setSupportSuccess("");
+
+    const trimmedName = form.name.trim();
+    const trimmedEmail = form.email.trim();
+    const trimmedMessage = form.message.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedMessage) {
+      setSupportError("Please fill out all fields before sending.");
       return;
     }
-    const subject = encodeURIComponent("CareConnect support request");
-    const body = encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`);
-    window.location.href = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
+
+    try {
+      setLoading(true);
+      const res = await sendSupportMessage({
+        name: trimmedName,
+        email: trimmedEmail,
+        message: trimmedMessage,
+      });
+
+      setSupportSuccess(
+        res?.message ||
+          "Your message has been sent successfully! Our support team will get back to you shortly."
+      );
+      setForm({
+        name: "",
+        email: "",
+        message: "",
+      });
+    } catch (err) {
+      console.error("Support message error:", err);
+      setSupportError(
+        err?.message ||
+          `Unable to send message directly. You can also email us directly at ${supportEmail}`
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -288,6 +331,13 @@ export default function HelpPage() {
                   <div className="faq-answer">
 
                     <p>{faq.answer}</p>
+                    {faq.link && (
+                      <p style={{ marginTop: "8px" }}>
+                        <Link to={faq.link} style={{ color: "#0b5ed7", fontWeight: "600", textDecoration: "underline" }}>
+                          {faq.linkText || "Learn more"} →
+                        </Link>
+                      </p>
+                    )}
 
                   </div>
 
@@ -346,7 +396,7 @@ export default function HelpPage() {
 
               <div>
                 <span>Phone Support</span>
-                <strong>{supportPhone || "Phone support is not configured"}</strong>
+                <strong>{supportPhone || "+91 (800) 227-3266"}</strong>
               </div>
 
             </div>
@@ -360,7 +410,7 @@ export default function HelpPage() {
 
               <div>
                 <span>Email Support</span>
-                <strong>{supportEmail || "Support email is not configured"}</strong>
+                <strong>{supportEmail}</strong>
               </div>
 
             </div>
@@ -374,7 +424,8 @@ export default function HelpPage() {
 
               <div>
                 <span>Support Hours</span>
-                <strong>Use the configured support contact</strong>
+                <strong>Mon – Sat: 9:00 AM – 7:00 PM IST</strong>
+                <small className="support-hours-note">Sunday: 10:00 AM – 2:00 PM IST (Emergency On-Call)</small>
               </div>
 
             </div>
@@ -382,7 +433,7 @@ export default function HelpPage() {
           </div>
 
 
-          <a className="contact-support-button" href={supportPhone ? `tel:${supportPhone}` : supportEmail ? `mailto:${supportEmail}` : undefined}>
+          <a className="contact-support-button" href={supportPhone ? `tel:${supportPhone}` : `mailto:${supportEmail}`}>
             <FaPhone />
             Contact Support
           </a>
@@ -403,7 +454,7 @@ export default function HelpPage() {
               </h2>
 
               <p>
-                Tell us how we can help you.
+                Have a question or need assistance? Send us a message directly.
               </p>
             </div>
 
@@ -427,6 +478,7 @@ export default function HelpPage() {
                   value={form.name}
                   onChange={handleFormChange}
                   placeholder="Enter your name"
+                  disabled={loading}
                   required
                 />
 
@@ -443,6 +495,7 @@ export default function HelpPage() {
                   value={form.email}
                   onChange={handleFormChange}
                   placeholder="Enter your email"
+                  disabled={loading}
                   required
                 />
 
@@ -460,22 +513,40 @@ export default function HelpPage() {
                 value={form.message}
                 onChange={handleFormChange}
                 placeholder="Describe your question or issue..."
+                rows="4"
+                disabled={loading}
                 required
               />
 
             </div>
 
 
-            {supportError && <div className="message-error" role="alert">{supportError}</div>}
-            <p className="support-delivery-note">This opens your configured email app with your message ready to send.</p>
+            {supportSuccess && (
+              <div className="message-success" role="status">
+                <FaCircleInfo />
+                <span>{supportSuccess}</span>
+              </div>
+            )}
+
+            {supportError && (
+              <div className="message-error" role="alert">
+                <FaCircleInfo />
+                <span>{supportError}</span>
+              </div>
+            )}
+
+            <p className="support-delivery-note">
+              Messages are sent directly to {supportEmail}. Our team typically responds within 24 hours.
+            </p>
 
 
             <button
               type="submit"
               className="send-message-button"
+              disabled={loading}
             >
               <FaPaperPlane />
-              Send Message
+              {loading ? "Sending Message..." : "Send Message"}
             </button>
 
           </form>

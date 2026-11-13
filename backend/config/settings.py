@@ -14,10 +14,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 import os
+import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 load_dotenv()
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -119,7 +121,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL and DATABASE_URL.startswith("sqlite"):
+if "test" in sys.argv:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+elif DATABASE_URL and DATABASE_URL.startswith("sqlite"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -189,19 +198,65 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # EMAIL CONFIGURATION
 # ============================================================
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com").strip()
+try:
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587").strip())
+except (ValueError, TypeError):
+    EMAIL_PORT = 587
 
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
+DEFAULT_FROM_EMAIL = (
+    os.getenv("DEFAULT_FROM_EMAIL", "").strip() or EMAIL_HOST_USER or "webmaster@localhost"
+)
 
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+# TLS/SSL configuration: avoid enabling both simultaneously
+_raw_ssl = os.getenv("EMAIL_USE_SSL", "False").strip().lower() in {"1", "true", "yes", "on"}
+_raw_tls = os.getenv("EMAIL_USE_TLS", "True").strip().lower() in {"1", "true", "yes", "on"}
 
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+if _raw_ssl and _raw_tls:
+    if EMAIL_PORT == 465:
+        EMAIL_USE_SSL = True
+        EMAIL_USE_TLS = False
+    else:
+        EMAIL_USE_SSL = False
+        EMAIL_USE_TLS = True
+else:
+    EMAIL_USE_SSL = _raw_ssl
+    EMAIL_USE_TLS = _raw_tls
+
+try:
+    EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10").strip())
+except (ValueError, TypeError):
+    EMAIL_TIMEOUT = 10
+
+# Email backend: default to SMTP if EMAIL_HOST_USER is set or if in production (!DEBUG).
+# Only fallback to console backend in local development when no credentials are provided.
+_default_email_backend = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if (EMAIL_HOST_USER or not DEBUG)
+    else "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", _default_email_backend).strip()
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173" if DEBUG else "https://careconnect-frontend.vercel.app",
+).rstrip("/")
+
+from datetime import timedelta
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+}
+
+EMERGENCY_SERVICES_PHONE = os.getenv("EMERGENCY_SERVICES_PHONE", "").strip()

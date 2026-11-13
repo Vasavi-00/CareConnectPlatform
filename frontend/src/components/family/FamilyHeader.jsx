@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   FaBars,
@@ -19,6 +19,7 @@ import {
 } from "react-icons/fa6";
 
 import logo from "../../assets/images/logo.png";
+import clearCareConnectSession from "../../services/clearSession";
 
 import {
   getNotifications,
@@ -41,6 +42,9 @@ export default function FamilyHeader({
 }) {
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const profileMenuRef = useRef(null);
+  const profileButtonRef = useRef(null);
 
 
   // =====================================================
@@ -89,6 +93,46 @@ export default function FamilyHeader({
 
   const [showProfileMenu, setShowProfileMenu] =
     useState(false);
+  const [logoutError, setLogoutError] = useState("");
+
+  useEffect(() => {
+    if (!showProfileMenu) return undefined;
+
+    const closeOnOutsidePointer = (event) => {
+      if (!profileMenuRef.current?.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setShowProfileMenu(false);
+        profileButtonRef.current?.focus();
+      }
+      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        const items = profileMenuRef.current?.querySelectorAll("[role='menuitem']");
+        if (!items?.length) return;
+        const currentIndex = Array.from(items).indexOf(document.activeElement);
+        let nextIndex = currentIndex;
+        if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = items.length - 1;
+        else if (event.key === "ArrowDown") nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+        else if (event.key === "ArrowUp") nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+        event.preventDefault();
+        items[nextIndex]?.focus();
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showProfileMenu]);
+
+  useEffect(() => {
+    setShowProfileMenu(false);
+  }, [location.pathname]);
 
 
   // =====================================================
@@ -101,7 +145,7 @@ export default function FamilyHeader({
   const [notifications, setNotifications] = useState([]);
   const elderId = selectedElder?.elder_id || selectedElder?.elder?.id;
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       const rows = await getNotifications();
       const visible = elderId ? rows.filter((item) => !item.elder || String(item.elder.id) === String(elderId)) : [];
@@ -111,9 +155,9 @@ export default function FamilyHeader({
         return { ...item, type, icon, unread: !item.is_read, time: item.created_at ? new Date(item.created_at).toLocaleString() : "" };
       }));
     } catch (err) { console.error("Family notification load error:", err); }
-  };
+  }, [elderId]);
 
-  useEffect(() => { loadNotifications(); }, [elderId]);
+  useEffect(() => { loadNotifications(); }, [loadNotifications]);
   const unreadCount = notifications.filter((notification) => notification.unread).length;
 
   const markAsRead = async (id) => {
@@ -144,11 +188,17 @@ export default function FamilyHeader({
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("careconnect_access");
-    localStorage.removeItem("careconnect_refresh");
-    localStorage.removeItem("careconnect_user");
-    setShowProfileMenu(false);
-    navigate("/login", { replace: true });
+    try {
+      // CareConnect uses stateless JWT auth; logout invalidates this browser's
+      // session by removing both tokens and the cached route-guard user.
+      clearCareConnectSession();
+      setLogoutError("");
+      setShowProfileMenu(false);
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Unable to clear the local CareConnect session:", error);
+      setLogoutError("We could not clear your saved sign-in. Please try again.");
+    }
   };
 
 
@@ -256,6 +306,8 @@ export default function FamilyHeader({
               ? "Close sidebar"
               : "Open sidebar"
           }
+          aria-expanded={sidebarOpen}
+          aria-controls="family-navigation-sidebar"
         >
           <FaBars />
         </button>
@@ -263,7 +315,7 @@ export default function FamilyHeader({
 
         {/* CareConnect Brand */}
 
-        <div className="header-brand">
+        <Link className="header-brand" to="/dashboard/family" aria-label="CareConnect family dashboard home">
 
           <img
             src={logo}
@@ -283,7 +335,7 @@ export default function FamilyHeader({
 
           </div>
 
-        </div>
+        </Link>
 
       </div>
 
@@ -558,13 +610,25 @@ export default function FamilyHeader({
             PROFILE
         ================================================= */}
 
-        <div className="family-profile-wrapper" onMouseLeave={() => setShowProfileMenu(false)}>
+        <div
+          className="family-profile-wrapper"
+          ref={profileMenuRef}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+              setShowProfileMenu(false);
+            }
+          }}
+        >
           <button
+            ref={profileButtonRef}
             type="button"
             className="family-profile-btn"
             onClick={() => setShowProfileMenu((prev) => !prev)}
-            aria-label="Family profile menu"
+            aria-label={`Account menu for ${fullName}`}
+            aria-haspopup="menu"
             aria-expanded={showProfileMenu}
+            aria-controls="family-profile-dropdown"
+            id="family-profile-menu-button"
           >
             <div className="family-avatar-circle">{avatarLetter}</div>
             <div className="family-profile-meta">
@@ -575,7 +639,7 @@ export default function FamilyHeader({
           </button>
 
           {showProfileMenu && (
-            <div className="family-profile-dropdown">
+            <div className="family-profile-dropdown" id="family-profile-dropdown" role="menu" aria-labelledby="family-profile-menu-button">
               <div className="family-profile-dropdown-header">
                 <div className="family-avatar-circle large">{avatarLetter}</div>
                 <div>
@@ -586,18 +650,22 @@ export default function FamilyHeader({
               </div>
 
               <div className="family-profile-dropdown-links">
-                <button type="button" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/profile"); }}>
+                <button type="button" role="menuitem" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/settings"); }}>
+                  <FaUser /> My Profile
+                </button>
+                <button type="button" role="menuitem" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/profile"); }}>
                   <FaUser /> Parent Profile
                 </button>
-                <button type="button" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/settings"); }}>
+                <button type="button" role="menuitem" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/settings"); }}>
                   <FaGear /> Settings
                 </button>
-                <button type="button" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/help"); }}>
+                <button type="button" role="menuitem" onClick={() => { setShowProfileMenu(false); navigate("/dashboard/family/help"); }}>
                   <FaCircleQuestion /> Help & Support
                 </button>
-                <button type="button" className="family-logout-link" onClick={handleLogout}>
+                <button type="button" role="menuitem" className="family-logout-link" onClick={handleLogout}>
                   <FaArrowRightFromBracket /> Sign Out
                 </button>
+                {logoutError && <p className="family-logout-error" role="alert">{logoutError}</p>}
               </div>
             </div>
           )}

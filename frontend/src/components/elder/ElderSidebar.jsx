@@ -1,125 +1,135 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import useFocusTrap from "../../hooks/useFocusTrap";
+
 import {
   FaHouse,
-  FaPills,
   FaCalendarCheck,
-  FaHeart,
-  FaBell,
+  FaPills,
   FaRobot,
+  FaBell,
+  FaHeart,
   FaTriangleExclamation,
   FaUser,
 } from "react-icons/fa6";
 
 import sidebarCare from "../../assets/images/sidebar-care.png";
+import "../../styles/family/FamilySidebar.css";
 
 export default function ElderSidebar({
   sidebarOpen,
+  isMobile,
   unreadCount = 0,
-  onTriggerSos,
+  onNavigate,
 }) {
+  const isMobileDevice =
+    isMobile ?? (typeof window !== "undefined" && window.innerWidth <= 800);
+  const sidebarRef = useFocusTrap(sidebarOpen && isMobileDevice);
+
   return (
-    <aside className={`elder-sidebar ${sidebarOpen ? "open" : "closed"}`}>
-      <nav className="elder-sidebar-nav">
+    <aside
+      ref={sidebarRef}
+      id="elder-navigation-sidebar"
+      className={`family-sidebar elder-sidebar ${
+        sidebarOpen ? "open" : "closed"
+      }`}
+      aria-label="Elder dashboard navigation"
+      aria-hidden={!sidebarOpen}
+    >
+      {/* ==========================================
+          NAVIGATION
+          ========================================== */}
+      <nav className="sidebar-navigation" inert={!sidebarOpen}>
         <NavLink
           to="/elder/dashboard"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
+          end
+          className="sidebar-nav-link"
+          onClick={onNavigate}
         >
-          <FaHouse className="elder-nav-icon" />
-          <span className="elder-nav-label">Home</span>
-        </NavLink>
-
-        <NavLink
-          to="/elder/medicines"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
-        >
-          <FaPills className="elder-nav-icon" />
-          <span className="elder-nav-label">My Medicines</span>
+          <FaHouse />
+          <span>Overview</span>
         </NavLink>
 
         <NavLink
           to="/elder/appointments"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
+          className="sidebar-nav-link"
+          onClick={onNavigate}
         >
-          <FaCalendarCheck className="elder-nav-icon" />
-          <span className="elder-nav-label">My Appointments</span>
+          <FaCalendarCheck />
+          <span>Appointments</span>
         </NavLink>
 
         <NavLink
-          to="/elder/family"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
+          to="/elder/medicines"
+          className="sidebar-nav-link"
+          onClick={onNavigate}
         >
-          <FaHeart className="elder-nav-icon" />
-          <span className="elder-nav-label">My Family</span>
-        </NavLink>
-
-        <NavLink
-          to="/elder/notifications"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
-        >
-          <FaBell className="elder-nav-icon" />
-          <span className="elder-nav-label">Notifications</span>
-          {unreadCount > 0 && (
-            <span className="elder-nav-badge">{unreadCount}</span>
-          )}
+          <FaPills />
+          <span>Medicine</span>
         </NavLink>
 
         <NavLink
           to="/elder/ai"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
+          className="sidebar-nav-link"
+          onClick={onNavigate}
         >
-          <FaRobot className="elder-nav-icon" />
-          <span className="elder-nav-label">AI Companion</span>
+          <FaRobot />
+          <span>AI Companion</span>
+        </NavLink>
+
+        <NavLink
+          to="/elder/notifications"
+          className="sidebar-nav-link"
+          onClick={onNavigate}
+        >
+          <FaBell />
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <span className="sidebar-nav-badge">{unreadCount}</span>
+          )}
+        </NavLink>
+
+        <NavLink
+          to="/elder/family"
+          className="sidebar-nav-link"
+          onClick={onNavigate}
+        >
+          <FaHeart />
+          <span>Family</span>
         </NavLink>
 
         <NavLink
           to="/elder/sos"
-          className={({ isActive }) =>
-            `elder-nav-item sos-nav-item ${isActive ? "active" : ""}`
-          }
-          onClick={(e) => {
-            if (onTriggerSos) {
-              // Optionally trigger the SOS confirm modal directly
-            }
-          }}
+          className="sidebar-nav-link sidebar-nav-link-sos"
+          onClick={onNavigate}
         >
-          <FaTriangleExclamation className="elder-nav-icon sos-icon-alert" />
-          <span className="elder-nav-label">Emergency SOS</span>
+          <FaTriangleExclamation />
+          <span>Emergency SOS</span>
         </NavLink>
 
         <NavLink
           to="/elder/profile"
-          className={({ isActive }) =>
-            `elder-nav-item ${isActive ? "active" : ""}`
-          }
+          className="sidebar-nav-link"
+          onClick={onNavigate}
         >
-          <FaUser className="elder-nav-icon" />
-          <span className="elder-nav-label">My Profile</span>
+          <FaUser />
+          <span>Profile</span>
         </NavLink>
       </nav>
 
+      {/* ==========================================
+          SIDEBAR ILLUSTRATION
+          ========================================== */}
       <div>
-        <img
-          src={sidebarCare}
-          alt="Care and comfort"
-          className="elder-sidebar-care-img"
-        />
-        <span className="elder-sidebar-tagline">
-          Care • Connect • Always
-        </span>
+        <center>
+          <img
+            src={sidebarCare}
+            alt="Elder and caregiver"
+            className="sidebar-care-image"
+          />
+        </center>
       </div>
     </aside>
   );
 }
+

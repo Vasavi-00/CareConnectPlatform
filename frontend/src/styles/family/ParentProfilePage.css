@@ -8,13 +8,9 @@
   margin: 0 auto;
   padding: 28px 30px 40px;
   box-sizing: border-box;
-  color: #203b5f;
-  background:
-    linear-gradient(
-      135deg,
-      #6baafc 0%,
-      #2982ef 100%
-    );
+  color: #0f172a;
+  background: linear-gradient(135deg, #6baafc 0%, #2982ef 100%);
+  min-height: 100%;
 }
 
 
@@ -35,12 +31,10 @@
 
   border-radius: 20px;
 
-  background: linear-gradient(
-    135deg,
-    #e5f2ff 0%,
-    #dcecff 55%,
-    #e8f8f1 100%
-  );
+  background: linear-gradient(135deg,
+      #e5f2ff 0%,
+      #dcecff 55%,
+      #e8f8f1 100%);
 
   border: 1px solid rgba(255, 255, 255, 0.7);
 
@@ -230,11 +224,9 @@
 
   border-radius: 50%;
 
-  background: linear-gradient(
-    135deg,
-    #cfe4ff,
-    #dff5ec
-  );
+  background: linear-gradient(135deg,
+      #cfe4ff,
+      #dff5ec);
 
   color: #397bc4;
 
@@ -405,7 +397,7 @@
   color: #dc8a21;
 }
 
-.care-info-row > div:last-child {
+.care-info-row>div:last-child {
   display: flex;
   flex-direction: column;
 
@@ -493,7 +485,7 @@
   color: #d45c88;
 }
 
-.preference-item > div:last-child {
+.preference-item>div:last-child {
   display: flex;
   flex-direction: column;
 
@@ -945,7 +937,7 @@
   font-size: 12px;
 }
 
-.modal-header > button {
+.modal-header>button {
   width: 34px;
   height: 34px;
 

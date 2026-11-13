@@ -109,6 +109,7 @@ function Navbar() {
           <li>
             <a
               href="#home"
+              className={activeSection === "home" ? "active" : ""}
               onClick={closeMenu}
             >
               Home
@@ -118,6 +119,7 @@ function Navbar() {
           <li>
             <a
               href="#features"
+              className={activeSection === "features" ? "active" : ""}
               onClick={closeMenu}
             >
               Features
@@ -127,6 +129,7 @@ function Navbar() {
           <li>
             <a
               href="#works"
+              className={activeSection === "works" ? "active" : ""}
               onClick={closeMenu}
             >
               How It Works
@@ -136,6 +139,7 @@ function Navbar() {
           <li>
             <a
               href="#about"
+              className={activeSection === "about" ? "active" : ""}
               onClick={closeMenu}
             >
               About
@@ -145,6 +149,7 @@ function Navbar() {
           <li>
             <a
               href="#contact"
+              className={activeSection === "contact" ? "active" : ""}
               onClick={closeMenu}
             >
               Contact

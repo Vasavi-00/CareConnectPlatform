@@ -6,6 +6,7 @@ from .models import Appointment
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    location = serializers.CharField(max_length=1000, required=False, allow_blank=True)
     elder_id = serializers.PrimaryKeyRelatedField(
         source="elder",
         queryset=ElderProfile.objects.all(),
@@ -29,6 +30,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "elder_id",
             "doctor_name",
             "clinic_name",
+            "location",
             "appointment_at",
             "reason",
             "notes",
@@ -82,6 +84,15 @@ class AppointmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "appointment_at":
                     "Appointment must be scheduled for a future date and time."
+            })
+
+        if self.instance is None and not attrs.get("location", "").strip():
+            raise serializers.ValidationError({
+                "location": "Appointment location/address is required."
+            })
+        if "location" in attrs and not attrs["location"].strip():
+            raise serializers.ValidationError({
+                "location": "Appointment location/address is required."
             })
 
         return attrs

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import {
     requestPasswordResetOTP,
@@ -31,6 +31,8 @@ import "../../styles/ForgotPassword/forgotPassword.css";
 export default function ForgotPassword() {
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
 
 
     /* =====================================================
@@ -103,6 +105,32 @@ export default function ForgotPassword() {
 
 
     /* =====================================================
+       HANDLE DIRECT RESET LINK QUERY PARAMETERS
+    ===================================================== */
+
+    useEffect(() => {
+
+        const queryEmail = searchParams.get("email");
+        const queryOtp = searchParams.get("otp");
+
+        if (queryEmail) {
+            const trimmed = queryEmail.trim();
+            setEmail(trimmed);
+
+            if (queryOtp) {
+                const cleanedOtp = queryOtp.trim().slice(0, 6);
+                setOtp(cleanedOtp);
+
+                if (/^\d{6}$/.test(cleanedOtp)) {
+                    setStep(2);
+                }
+            }
+        }
+
+    }, [searchParams]);
+
+
+    /* =====================================================
        CLEAR MESSAGES
     ===================================================== */
 
@@ -166,7 +194,7 @@ export default function ForgotPassword() {
 
             setSuccess(
                 response?.message ||
-                    "If an account exists with this email, a verification code has been sent."
+                    "If an account exists with this email, a verification code has been sent. Please check your inbox and spam folder."
             );
 
 
@@ -176,15 +204,10 @@ export default function ForgotPassword() {
 
         } catch (err) {
 
-            console.error(
-                "Request OTP error:",
-                err
-            );
-
-
             setError(
-                err?.message ||
-                    "Unable to send verification code."
+                err instanceof TypeError
+                    ? "We could not reach the server. Check your connection and try again."
+                    : err?.message || "Unable to send verification code."
             );
 
         } finally {
@@ -335,7 +358,7 @@ export default function ForgotPassword() {
 
             setTimeout(() => {
 
-                navigate("/login");
+                navigate("/login", { replace: true, state: location.state });
 
             }, 1500);
 
@@ -389,7 +412,7 @@ export default function ForgotPassword() {
 
             setSuccess(
                 response?.message ||
-                    "A new verification code has been sent."
+                    "A new verification code has been sent. Please check your inbox and spam folder."
             );
 
 
@@ -622,11 +645,7 @@ export default function ForgotPassword() {
 
 
                                 <p>
-                                    Enter the email address
-                                    associated with your
-                                    CareConnect account and
-                                    we'll send you a
-                                    verification code.
+                                    Enter the email address associated with your CareConnect account and we'll send you a 6-digit verification code.
                                 </p>
 
                             </div>
@@ -689,6 +708,7 @@ export default function ForgotPassword() {
 
                                         <input
                                             type="email"
+                                            required
                                             placeholder="you@example.com"
                                             value={email}
                                             onChange={(event) =>
@@ -709,6 +729,7 @@ export default function ForgotPassword() {
                                     type="submit"
                                     className="forgot-submit"
                                     disabled={loading}
+                                    aria-busy={loading}
                                 >
 
                                     {loading
@@ -750,9 +771,7 @@ export default function ForgotPassword() {
 
 
                                 <p>
-                                    Enter the 6-digit code
-                                    we sent to your email
-                                    address.
+                                    Enter the 6-digit verification code sent to your email. Be sure to check your spam or junk folder if you don't see it in your inbox.
                                 </p>
 
                             </div>
@@ -1156,7 +1175,7 @@ export default function ForgotPassword() {
 
                         Remember your password?{" "}
 
-                        <Link to="/login">
+                        <Link to="/login" state={location.state}>
                             Sign in
                         </Link>
 

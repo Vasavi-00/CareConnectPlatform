@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import useSafeBack from "../../hooks/useSafeBack";
 import {
   FaArrowLeft,
   FaTriangleExclamation,
@@ -8,12 +8,17 @@ import {
   FaCheck,
 } from "react-icons/fa6";
 
+function getTelHref(phone) {
+  const normalized = String(phone || "").replace(/[\s()-]/g, "");
+  return /^\+?\d{7,15}$/.test(normalized) ? `tel:${normalized}` : "";
+}
+
 export default function ElderSOSPage({
   emergencyContacts = [],
   sosStatus,
   onOpenSosModal,
 }) {
-  const navigate = useNavigate();
+  const goBack = useSafeBack("/elder/dashboard");
 
   return (
     <div className="elder-subpage">
@@ -21,7 +26,7 @@ export default function ElderSOSPage({
         <button
           type="button"
           className="elder-back-btn"
-          onClick={() => navigate("/elder/dashboard")}
+          onClick={goBack}
         >
           <FaArrowLeft /> Back to Home
         </button>
@@ -57,12 +62,12 @@ export default function ElderSOSPage({
         {sosStatus && (
           <div className="sos-page-status-alert">
             <div className="status-badge-title">
-              <FaCheck /> Emergency Request Active
+              <FaCheck /> {sosStatus.status === "CANCELLED" ? "Emergency Request Cancelled" : "Emergency Request Active"}
             </div>
-            <p>{sosStatus.message || "Family members have been alerted."}</p>
-            {sosStatus.contact && (
+            <p>{sosStatus.message || "Emergency request status is available."}</p>
+            {getTelHref(sosStatus.contact?.phone) && (
               <a
-                href={`tel:${sosStatus.contact.phone}`}
+                href={getTelHref(sosStatus.contact.phone)}
                 className="btn-re-dial-contact"
               >
                 <FaPhone /> Re-dial {sosStatus.contact.name} (
@@ -80,8 +85,8 @@ export default function ElderSOSPage({
           <div className="elder-card elder-empty-box">
             <FaUserShield />
             <p>
-              No specific emergency contacts found. Emergency alerts will notify all
-              connected family members automatically.
+              No phone contacts are configured. SOS can still notify family members
+              who have an active CareConnect connection with SOS alerts enabled.
             </p>
           </div>
         ) : (
@@ -109,10 +114,10 @@ export default function ElderSOSPage({
                   type="button"
                   className="btn-call-emergency-contact"
                   onClick={() => {
-                    if (contact.phone) {
-                      window.location.href = `tel:${contact.phone}`;
-                    }
+                    const href = getTelHref(contact.phone);
+                    if (href) window.location.href = href;
                   }}
+                  disabled={!getTelHref(contact.phone)}
                 >
                   <FaPhone /> Call Now
                 </button>

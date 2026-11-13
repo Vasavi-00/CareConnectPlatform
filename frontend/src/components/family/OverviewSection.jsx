@@ -20,8 +20,7 @@ import familyElderCareImg from "../../assets/images/family-elder-care.jpg";
 
 import {
   getMedicines,
-  getAppointments,
-  getSOSEvents,
+  getAppointments
 } from "../../services/api/familyApi";
 
 import "../../styles/family/OverviewSection.css";
@@ -334,19 +333,8 @@ export default function OverviewSection({
 
   const [appointmentError, setAppointmentError] =
     useState("");
-  const [sosEvents, setSosEvents] = useState([]);
 
   const elderId = getElderId(selectedElder);
-
-  useEffect(() => {
-    let mounted = true;
-    const loadSosEvents = () => getSOSEvents().then((events) => {
-      if (mounted) setSosEvents(Array.isArray(events) ? events : []);
-    }).catch(() => { if (mounted) setSosEvents([]); });
-    loadSosEvents();
-    const timer = window.setInterval(loadSosEvents, 15000);
-    return () => { mounted = false; window.clearInterval(timer); };
-  }, [elderId]);
 
   const firstName = getFirstName(
     user,
@@ -695,24 +683,6 @@ export default function OverviewSection({
   return (
     <section className="overview">
 
-      {sosEvents.filter((event) => !elderId || String(event.elder_id) === String(elderId)).length > 0 && (
-        <section className="overview-card" aria-label="Recent emergency events">
-          <div className="overview-card-header"><h2>Emergency Events</h2></div>
-          {sosEvents.filter((event) => !elderId || String(event.elder_id) === String(elderId)).slice(0, 5).map((event) => (
-            <article key={event.id} className="sos-page-status-alert">
-              <strong>Emergency #{event.id} · {event.elder_name}</strong>
-              <p>{new Date(event.created_at).toLocaleString()} · Status: {event.status}</p>
-              <p>{event.location_available ? `Coordinates ${event.latitude}, ${event.longitude} · accuracy ${event.accuracy ?? "unknown"} m` : "Location unavailable"}</p>
-              <p>In-app notification status: {event.notification_status}; records saved for {event.notification_recipient_count} recipient(s). Read or response is not confirmed.</p>
-              {event.maps_url && <a href={event.maps_url} target="_blank" rel="noreferrer">View location in Maps</a>}
-              {event.history?.length > 0 && <ul>{event.history.map((item, index) => <li key={`${event.id}-${index}`}>{new Date(item.created_at).toLocaleString()} · {item.detail || item.status}</li>)}</ul>}
-            </article>
-          ))}
-        </section>
-      )}
-
-      {/* =====================================================
-          WELCOME BANNER
       {/* =====================================================
           PREMIUM HERO CARE BANNER
           ===================================================== */}
